@@ -129,6 +129,7 @@
     }
 
     .boost{
+      position:relative;
       display:flex;
       align-items:center;
       justify-content:center;
@@ -140,6 +141,29 @@
 
     .boost:hover{
       color:var(--text);
+    }
+
+    .boost::after{
+      content:"boost";
+      position:absolute;
+      bottom:120%;
+      right:0;
+      padding:6px 10px;
+      font-size:12px;
+      color:var(--text);
+      background:var(--panel2);
+      border:1px solid var(--hair);
+      border-radius:8px;
+      white-space:nowrap;
+      opacity:0;
+      pointer-events:none;
+      transform:translateY(4px);
+      transition:opacity 0.15s ease, transform 0.15s ease;
+    }
+
+    .boost:hover::after{
+      opacity:1;
+      transform:translateY(0);
     }
 
     .rank{
@@ -192,7 +216,7 @@
         </div>
 
         <div class="nav-actions">
-          <a class="pill" href="index.html">leaderboard</a>
+          <a class="pill" href="leaderboard.html">leaderboard</a>
           <a class="pill" href="map.html">map</a>
           <a class="pill" href="post.html">post</a>
           <a class="pill" href="login.html">log in</a>
