@@ -71,7 +71,7 @@
         <a class="logo" href="leaderboard.html">nunc</a>
         <div class="nav-actions">
           <a class="pill" href="leaderboard.html">leaderboard</a>
-          <a class="pill" href="map.html">map</a>
+          <a class="pill" href="explore.html">explore</a>
           <a class="pill" href="post.html">post</a>
           <a class="pill" href="login.html">log in</a>
         </div>
@@ -117,7 +117,15 @@
       const prune=p=>p.filter(x=>now()-x.createdAt<ONE_DAY_MS);
       const load=()=>JSON.parse(localStorage.getItem(KEY)||'[]');
       const save=p=>localStorage.setItem(KEY,JSON.stringify(p));
-      const update=()=>elCount.textContent=elText.value.length+'/'+MAX;
+      const formatExpiry=ts=>{
+        const d=new Date(ts);
+        return d.toLocaleString(undefined,{hour:'2-digit',minute:'2-digit',hour12:false,day:'2-digit',month:'short',year:'numeric'});
+      };
+      const update=()=>{
+        elCount.textContent=elText.value.length+'/'+MAX;
+        const expiry=now()+ONE_DAY_MS;
+        elTTL.textContent='Expires in 24h: '+formatExpiry(expiry);
+      };
       const submit=()=>{
         const t=elText.value.trim();
         if(!t)return toastMsg('Empty post blocked.');
