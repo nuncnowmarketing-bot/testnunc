@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>nunc — Make a post</title>
+  <style>
+    :root{
+      --bg:#121212;
+      --panel:#161616;
+      --panel2:#1b1b1b;
+      --text:#ffffff;
+      --muted:rgba(255,255,255,0.70);
+      --hair:rgba(255,255,255,0.12);
+      --pill:rgba(255,255,255,0.06);
+      --pillHover:rgba(255,255,255,0.10);
+      --danger:#ff4d4d;
+      --ok:#7CFCB2;
+      --gold:#d4af37;
+      --goldBg:rgba(212,175,55,0.15);
+      --goldHover:rgba(212,175,55,0.25);
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--text);
+      font-family:Garamond,"EB Garamond","Cormorant Garamond","Times New Roman",serif;
+      letter-spacing:0.2px;
+    }
+
+    a{color:inherit; text-decoration:none}
+
+    .wrap{max-width:980px; margin:0 auto; padding:18px 16px 48px}
+
+    /* Top bar */
+    .topbar{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px}
+    .brand{display:flex; align-items:baseline; gap:10px}
+    .logo{font-size:28px; font-weight:700; letter-spacing:0.6px}
+    .tag{font-size:14px; color:var(--muted)}
+
+    .actions{display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end}
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:10px 12px;
+      border:1px solid var(--hair);
+      background:var(--pill);
+      border-radius:999px;
+      cursor:pointer;
+      user-select:none;
+      font:inherit;
+      line-height:1;
+      transition:background 120ms ease, transform 120ms ease;
+    }
+    .btn:hover{background:var(--pillHover)}
+    .btn.gold{
+      border-color:var(--gold);
+      background:var(--goldBg);
+      color:var(--gold);
+      font-weight:700;
+    }
+    .btn.gold:hover{background:var(--goldHover)}
+    .btn:active{transform:translateY(1px)}
+
+    /* Card */
+    .card{
+      border:1px solid var(--hair);
+      background:linear-gradient(180deg, var(--panel), var(--panel2));
+      border-radius:18px;
+      padding:18px;
+      box-shadow:0 12px 30px rgba(0,0,0,0.35);
+    }
+
+    h1{margin:0 0 10px; font-size:24px}
+    .sub{margin:0 0 16px; color:var(--muted); font-size:15px}
+
+    .field{display:flex; flex-direction:column; gap:8px; margin-bottom:14px}
+    label{font-size:15px; color:var(--muted)}
+
+    textarea{
+      width:100%;
+      min-height:180px;
+      resize:vertical;
+      padding:14px;
+      border-radius:14px;
+      border:1px solid var(--hair);
+      background:rgba(255,255,255,0.03);
+      color:var(--text);
+      font:inherit;
+      font-size:18px;
+      line-height:1.35;
+      outline:none;
+    }
+    textarea:focus{border-color:rgba(255,255,255,0.22)}
+
+    .row{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap}
+    .meta{display:flex; gap:10px; align-items:center; color:var(--muted); font-size:14px}
+    .pill{
+      border:1px solid var(--hair);
+      background:rgba(255,255,255,0.04);
+      padding:6px 10px;
+      border-radius:999px;
+    }
+
+    .warn{color:var(--danger)}
+    .ok{color:var(--ok)}
+
+    .primary{
+      border-color:rgba(255,255,255,0.22);
+      background:rgba(255,255,255,0.08);
+      padding:12px 14px;
+      font-weight:700;
+    }
+
+    .help{
+      margin-top:14px;
+      padding-top:14px;
+      border-top:1px solid var(--hair);
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.35;
+    }
+
+    .toast{
+      position:fixed;
+      left:50%;
+      bottom:18px;
+      transform:translateX(-50%);
+      background:rgba(0,0,0,0.82);
+      border:1px solid var(--hair);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius:12px;
+      max-width:min(760px, calc(100vw - 24px));
+      display:none;
+    }
+
+    @media (max-width:640px){
+      .logo{font-size:24px}
+      textarea{font-size:17px}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand">
+        <a class="logo" href="leaderboard.html" aria-label="Home">nunc</a>
+        <span class="tag">text only</span>
+      </div>
+      <div class="actions">
+        <a class="btn" href="leaderboard.html">Leaderboard</a>
+        <a class="btn" href="map.html">Map</a>
+        <a class="btn" href="post.html">Post</a>
+        <a class="btn" href="login.html">Log in</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <h1>Make a post</h1>
+      <p class="sub">No links. No photos. Just text.</p>
+
+      <div class="field">
+        <label for="postText">Post</label>
+        <textarea id="postText" maxlength="480" placeholder="Write something worth boosting."></textarea>
+      </div>
+
+      <div class="row">
+        <div class="meta">
+          <span class="pill" id="charCount">0/480</span>
+          <span class="pill" id="ttl">Expires in: —</span>
+          <span class="pill" id="country">Location: —</span>
+        </div>
+        <button class="btn primary gold" id="submitBtn">Post</button>
+      </div>
+
+      <div class="help">
+        <div>Rules enforced: text-only (no URLs), max 480 characters, post expires after 24 hours.</div>
+        <div>Storage: local-only (browser). Replace with backend later.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    (function(){
+      const KEY = 'nunc_posts_v1';
+      const MAX = 480;
+      const ONE_DAY_MS = 24*60*60*1000;
+
+      const countries = [
+        'Ireland','France','Spain','Portugal','Germany','Italy','Netherlands','Belgium','Sweden','Norway',
+        'Denmark','Finland','Poland','Czechia','Austria','Switzerland','Greece','Turkey','Morocco','Tunisia',
+        'Egypt','Nigeria','Ghana','Kenya','South Africa','UAE','India','Japan','South Korea','Singapore',
+        'Australia','New Zealand','Canada','USA','Mexico','Brazil','Argentina','Chile'
+      ];
+
+      const elText = document.getElementById('postText');
+      const elCount = document.getElementById('charCount');
+      const elTTL = document.getElementById('ttl');
+      const elCountry = document.getElementById('country');
+      const elToast = document.getElementById('toast');
+      const elSubmit = document.getElementById('submitBtn');
+
+      const pageCountry = countries[Math.floor(Math.random()*countries.length)];
+      elCountry.textContent = 'Location: ' + pageCountry;
+
+      function now(){ return Date.now(); }
+
+      function toast(msg){
+        elToast.textContent = msg;
+        elToast.style.display = 'block';
+        clearTimeout(toast._t);
+        toast._t = setTimeout(()=>{ elToast.style.display='none'; }, 1800);
+      }
+
+      function sanitizeText(s){
+        // Trim and collapse excessive whitespace
+        return (s || '').replace(/\s+/g,' ').trim();
+      }
+
+      function hasUrl(s){
+        // Blocks obvious URLs (http(s), www, or bare domains like example.com)
+        return /(https?:\/\/|www\.|\b[a-z0-9-]+\.(com|net|org|io|co|me|app|gg|ai|dev|uk|ie|fr|de|es|it|nl|be|se|no|dk|fi|pl|cz|at|ch|gr|tr|ma|tn|eg|ng|gh|ke|za|ae|in|jp|kr|sg|au|nz|ca|us|mx|br|ar|cl)\b)/i.test(s);
+      }
+
+      function loadPosts(){
+        try{ return JSON.parse(localStorage.getItem(KEY) || '[]'); }
+        catch(e){ return []; }
+      }
+
+      function savePosts(posts){
+        localStorage.setItem(KEY, JSON.stringify(posts));
+      }
+
+      function prune(posts){
+        const t = now();
+        return posts.filter(p => (t - p.createdAt) < ONE_DAY_MS);
+      }
+
+      function updateCounter(){
+        const len = (elText.value || '').length;
+        elCount.textContent = len + '/' + MAX;
+        if(len > MAX-40) elCount.classList.add('warn'); else elCount.classList.remove('warn');
+      }
+
+      function updateTTL(){
+        // The TTL pill is for the next post (if posted now)
+        const exp = new Date(now() + ONE_DAY_MS);
+        const hh = String(exp.getHours()).padStart(2,'0');
+        const mm = String(exp.getMinutes()).padStart(2,'0');
+        elTTL.textContent = 'Expires in: 24h (at ' + hh + ':' + mm + ')';
+      }
+
+      function makeId(){
+        return 'p_' + Math.random().toString(36).slice(2) + '_' + Date.now().toString(36);
+      }
+
+      function submit(){
+        const raw = elText.value;
+        const text = sanitizeText(raw);
+
+        if(!text){ toast('Empty post blocked.'); return; }
+        if(hasUrl(text)){ toast('Links are blocked.'); return; }
+        if(text.length > MAX){ toast('Too long.'); return; }
+
+        const post = {
+          id: makeId(),
+          text,
+          country: pageCountry,
+          createdAt: now(),
+          expiresAt: now() + ONE_DAY_MS,
+          boosts: 0
+        };
+
+        const posts = prune(loadPosts());
+        posts.unshift(post);
+        savePosts(posts);
+
+        toast('Posted.');
+        // Go to leaderboard; if you want to stay here, delete next line.
+        setTimeout(()=>{ window.location.href = 'leaderboard.html'; }, 450);
+      }
+
+      // init
+      updateCounter();
+      updateTTL();
+      setInterval(updateTTL, 30*1000);
+
+      elText.addEventListener('input', updateCounter);
+      elSubmit.addEventListener('click', submit);
+
+      // Ctrl/Cmd+Enter posts
+      elText.addEventListener('keydown', (e)=>{
+        if((e.ctrlKey || e.metaKey) && e.key === 'Enter') submit();
+      });
+
+      // Keep localStorage clean
+      savePosts(prune(loadPosts()));
+    })();
+  </script>
+</body>
+</html>
