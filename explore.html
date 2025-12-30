@@ -283,10 +283,9 @@
         <div class="searchIcon">⌕</div>
         <input id="q" type="text" placeholder="Search countries" />
       </div>
-      <button class="btn" id="clearBtn">clear</button>
-      <button class="btn" id="randomBtn">random</button>
+      
     </div>
-    <div class="hint">Order is random until boost ledger is live.</div>
+    <div class="hint">Order is fixed per session until boost ledger is live.</div>
   </div>
 
   <div id="results" class="results"></div>
@@ -310,8 +309,7 @@ const countries = [
 const Q = document.getElementById('q');
 const RESULTS = document.getElementById('results');
 const EMPTY = document.getElementById('empty');
-const CLEAR = document.getElementById('clearBtn');
-const RANDOM = document.getElementById('randomBtn');
+
 
 function shuffle(arr){
   const a = arr.slice();
@@ -324,27 +322,58 @@ function shuffle(arr){
 
 let order = shuffle(countries);
 
+// rank is fixed by `order` (randomised once) — filtering must not renumber.
+let rankMap = Object.create(null);
+function rebuildRankMap(){
+  rankMap = Object.create(null);
+  for(let i=0;i<order.length;i++) rankMap[order[i]] = i+1;
+}
+rebuildRankMap();
+
 function render(list){
   RESULTS.innerHTML='';
-  if(!list.length){EMPTY.style.display='block';return}
+  if(!list.length){ EMPTY.style.display='block'; return; }
   EMPTY.style.display='none';
-  list.forEach((c,i)=>{
-    const row=document.createElement('div');
-    row.className='row';
-    row.innerHTML=`<div><div class="country">#${i+1} — ${c}</div></div><button class="go">open</button>`;
-    row.onclick=()=>location.href=`map.html?country=${encodeURIComponent(c)}`;
-    RESULTS.appendChild(row);
-  });
+
+  const frag = document.createDocumentFragment();
+  for(const c of list){
+    const r = document.createElement('div');
+    r.className = 'row';
+
+    const left = document.createElement('div');
+    const title = document.createElement('div');
+    title.className = 'country';
+    title.textContent = `#${rankMap[c]} — ${c}`;
+    left.appendChild(title);
+
+    const go = document.createElement('button');
+    go.className = 'go';
+    go.type = 'button';
+    go.textContent = 'open';
+    go.addEventListener('click', (e) => {
+      e.stopPropagation();
+      location.href = `map.html?country=${encodeURIComponent(c)}`;
+    });
+
+    r.appendChild(left);
+    r.appendChild(go);
+    r.addEventListener('click', () => {
+      location.href = `map.html?country=${encodeURIComponent(c)}`;
+    });
+
+    frag.appendChild(r);
+  }
+  RESULTS.appendChild(frag);
 }
 
 function filter(){
-  const q=Q.value.toLowerCase();
-  render(order.filter(c=>c.toLowerCase().includes(q)));
+  const q = (Q.value || '').trim().toLowerCase();
+  if(!q){ render(order); return; }
+  render(order.filter(c => c.toLowerCase().includes(q)));
 }
 
-Q.oninput=filter;
-CLEAR.onclick=()=>{Q.value='';filter()};
-RANDOM.onclick=()=>{order=shuffle(countries);filter()};
+Q.oninput = filter;
+
 
 render(order);
 </script>
