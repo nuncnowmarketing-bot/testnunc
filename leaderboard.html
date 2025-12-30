@@ -301,10 +301,10 @@
         </div>
 
         <div class="nav-actions">
-          <a class="pill" href="leaderboard.html">leaderboard</a>
-          <a class="pill" href="map.html">map</a>
-          <a class="pill" href="post.html">post</a>
-          <a class="pill" href="login.html">log in</a>
+          <a class="pill" href="explore.html">leaderboard</a>
+          <a class="pill" href="explore.html">explore</a>
+          <a class="pill" href="explore.html">post</a>
+          <a class="pill" href="explore.html">log in</a>
         </div>
       </div>
     </header>
@@ -313,7 +313,6 @@
       <section class="feed-shell" aria-label="Global feed">
         <div class="feed-header">
           <h2 class="feed-title">Global leaderboard</h2>
-          
         </div>
 
         <div id="feed" class="feed"></div>
@@ -344,7 +343,6 @@
 
     const FEED = document.getElementById('feed');
     const SENTINEL = document.getElementById('sentinel');
-    const FOOTER = document.getElementById('feedFooter');
     const STATUS = document.getElementById('status');
     const STATUS_TEXT = document.getElementById('statusText');
 
@@ -432,7 +430,6 @@
     let nextRank = 1;
     let loaded = 0;
     const BATCH = 12;
-    const SAMPLE_LIMIT = 50;
 
     function setLoading(isLoading){
       if(isLoading) STATUS.classList.add('loading');
@@ -451,17 +448,10 @@
         const frag = document.createDocumentFragment();
 
         for(let i=0;i<BATCH;i++){
-          // Start with 50 unique sample ranks, then keep going (infinite) by continuing rank count.
-          // This keeps the UI behavior identical to a real feed.
           const node = makePost(nextRank);
           frag.appendChild(node);
           nextRank++;
           loaded++;
-
-          // ensure initial prototype has at least 50 posts quickly
-          if(loaded === SAMPLE_LIMIT){
-            // keep going infinitely; no stop condition
-          }
         }
 
         FEED.appendChild(frag);
