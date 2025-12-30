@@ -313,7 +313,7 @@
       <section class="feed-shell" aria-label="Global feed">
         <div class="feed-header">
           <h2 class="feed-title">Global leaderboard</h2>
-          <div class="feed-sub">infinite</div>
+          
         </div>
 
         <div id="feed" class="feed"></div>
@@ -366,15 +366,32 @@
       'Most "debates" are status games disguised as logic.',
       'The algorithm is not neutral. It is a business model.',
       'Outrage is a distribution strategy.',
-      'The easiest way to win is to choose games with honest scoring.'
+      'The easiest way to win is to choose games with honest scoring.',
+      'Clarity is expensive. Vagueness is subsidised.',
+      'Every system optimises for what it measures, not what it claims to value.',
+      'Most people confuse confidence with competence.',
+      'Visibility without accountability produces noise.',
+      'Incentives explain behaviour better than morality.'
     ];
 
     const timeLabels = ['just now','1m','3m','6m','10m','18m','25m','40m','1h','2h','4h','7h','12h','18h','23h'];
 
     function rand(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 
+    function randomText(maxChars){
+      let out = '';
+      while(out.length < maxChars){
+        const next = rand(prompts);
+        if(out.length + next.length + 1 > maxChars) break;
+        out += (out ? ' ' : '') + next;
+      }
+      if(out.length === 0) out = rand(prompts);
+      return out;
+    }
+
     function makePost(rank){
-      const title = rand(prompts);
+      const maxLen = Math.floor(Math.random() * 200) + 1; // 1–200 chars
+      const title = randomText(maxLen).slice(0, maxLen);
       const country = rand(countries);
       const t = rand(timeLabels);
 
