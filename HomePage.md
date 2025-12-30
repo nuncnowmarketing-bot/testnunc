@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>nunc</title>
+  <style>
+    :root{
+      --bg:#121212;
+      --panel:#161616;
+      --panel2:#1b1b1b;
+      --text:#ffffff;
+      --muted:rgba(255,255,255,0.70);
+      --hair:rgba(255,255,255,0.12);
+      --pill:rgba(255,255,255,0.06);
+      --pillHover:rgba(255,255,255,0.10);
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--text);
+      font-family:Garamond,"EB Garamond","Cormorant Garamond","Times New Roman",serif;
+      letter-spacing:0.2px;
+    }
+
+    a{color:inherit;text-decoration:none}
+
+    .wrap{
+      min-height:100%;
+      display:flex;
+      flex-direction:column;
+    }
+
+    header{
+      position:sticky;
+      top:0;
+      background:rgba(18,18,18,0.94);
+      border-bottom:1px solid var(--hair);
+      z-index:10;
+    }
+
+    .nav{
+      max-width:1080px;
+      margin:0 auto;
+      padding:18px 20px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+    }
+
+    .brand{
+      display:flex;
+      align-items:baseline;
+      gap:12px;
+    }
+
+    .logo{
+      font-size:30px;
+      font-weight:600;
+      line-height:1;
+    }
+
+    .slogan{
+      font-size:14px;
+      color:var(--muted);
+      border-left:1px solid var(--hair);
+      padding-left:12px;
+      line-height:1.2;
+      white-space:nowrap;
+    }
+
+    .nav-actions{
+      display:flex;
+      gap:10px;
+    }
+
+    .pill{
+      padding:8px 14px;
+      border:1px solid var(--hair);
+      border-radius:999px;
+      background:var(--pill);
+      font-size:14px;
+      font-family:inherit;
+    }
+
+    .pill:hover{background:var(--pillHover)}
+
+    main{
+      flex:1;
+      max-width:1280px;
+      margin:0 auto;
+      padding:48px 20px 80px;
+    }
+
+    .leaderboard{
+      max-width:980px;
+      margin:42px auto 0;
+      padding:34px 34px 18px;
+      background:var(--panel);
+      border:1px solid var(--hair);
+      border-radius:18px;
+    }
+
+    .lb-header{
+      display:flex;
+      justify-content:space-between;
+      align-items:baseline;
+      padding-bottom:18px;
+      border-bottom:1px solid var(--hair);
+      margin-bottom:12px;
+    }
+
+    .lb-header h2{
+      font-size:26px;
+      font-weight:600;
+      margin:0;
+      letter-spacing:0.1px;
+    }
+
+    .region{
+      font-size:13px;
+      color:var(--muted);
+      letter-spacing:0.6px;
+      text-transform:uppercase;
+    }
+
+    .post{
+      display:grid;
+      grid-template-columns:64px 1fr 40px;
+      gap:18px;
+      padding:18px 0;
+      border-bottom:1px solid var(--hair);
+    }
+
+    .boost{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:18px;
+      color:var(--muted);
+      cursor:pointer;
+      user-select:none;
+    }
+
+    .boost:hover{
+      color:var(--text);
+    }
+
+    .rank{
+      font-size:14px;
+      color:var(--muted);
+      text-align:right;
+      padding-top:2px;
+    }
+
+    .content{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+
+    .title{
+      font-size:20px;
+      font-weight:600;
+      line-height:1.25;
+    }
+
+    .meta{
+      font-size:14px;
+      line-height:1.35;
+      color:var(--muted);
+    }
+
+    footer{
+      border-top:1px solid var(--hair);
+      background:var(--panel);
+    }
+
+    .foot{
+      max-width:1080px;
+      margin:0 auto;
+      padding:20px;
+      font-size:13px;
+      color:var(--muted);
+      display:flex;
+      justify-content:space-between;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="nav">
+        <div class="brand">
+          <div class="logo">nunc</div>
+          <div class="slogan">put your money where your mouth is.</div>
+        </div>
+        <div class="nav-actions">
+          <div class="pill">leaderboard</div>
+          <div class="pill">map</div>
+          <div class="pill">post</div>
+          <div class="pill">log in</div>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="leaderboard">
+        <div class="lb-header">
+          <h2>Global leaderboard</h2>
+          <div class="region">24h</div>
+        </div>
+
+        <div class="post">
+          <div class="rank">#1</div>
+          <div class="content">
+            <div class="title">Markets do not reward truth, they reward conviction.</div>
+            <div class="meta">global · posted recently</div>
+          </div>
+          <div class="boost">▲</div>
+        </div>
+
+        <div class="post">
+          <div class="rank">#2</div>
+          <div class="content">
+            <div class="title">Most social platforms hide price. That is the real manipulation.</div>
+            <div class="meta">europe · posted recently</div>
+          </div>
+          <div class="boost">▲</div>
+        </div>
+
+        <div class="post">
+          <div class="rank">#3</div>
+          <div class="content">
+            <div class="title">Attention is finite. Pretending otherwise creates noise, not value.</div>
+            <div class="meta">north america · posted recently</div>
+          </div>
+          <div class="boost">▲</div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="foot">
+        <div>© nunc</div>
+        <div>terms · transparency · ledger</div>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>
