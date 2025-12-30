@@ -186,9 +186,7 @@
       user-select:none;
     }
 
-    .btn:hover{
-      background:rgba(255,255,255,0.08);
-    }
+    .btn:hover{background:rgba(255,255,255,0.08)}
 
     .hint{
       font-size:13px;
@@ -196,10 +194,7 @@
       line-height:1.35;
     }
 
-    .results{
-      display:flex;
-      flex-direction:column;
-    }
+    .results{display:flex;flex-direction:column}
 
     .row{
       display:grid;
@@ -231,16 +226,6 @@
       margin-top:6px;
     }
 
-    .dot{
-      width:3px;
-      height:3px;
-      border-radius:999px;
-      background:var(--muted);
-      opacity:0.6;
-      display:inline-block;
-      transform:translateY(-1px);
-    }
-
     .go{
       justify-self:end;
       padding:9px 12px;
@@ -254,21 +239,11 @@
       user-select:none;
     }
 
-    .go:hover{
-      color:var(--text);
-      background:var(--pill);
-    }
+    .go:hover{color:var(--text);background:var(--pill)}
 
-    .empty{
-      padding:18px;
-      color:var(--muted);
-      font-size:13px;
-    }
+    .empty{padding:18px;color:var(--muted);font-size:13px}
 
-    footer{
-      border-top:1px solid var(--hair);
-      background:var(--panel);
-    }
+    footer{border-top:1px solid var(--hair);background:var(--panel)}
 
     .foot{
       max-width:1080px;
@@ -279,201 +254,99 @@
       display:flex;
       justify-content:space-between;
     }
-
-    @supports (-webkit-touch-callout: none){
-      html, body{background:var(--bg);}
-    }
-
-    @media (max-width:520px){
-      main{padding:12px 12px 48px}
-      .row{grid-template-columns:1fr 96px; padding:12px 14px}
-      .shell-header{padding:16px 14px 12px}
-      .country{font-size:17px}
-      .search{min-width:220px}
-    }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <header>
-      <div class="nav">
-        <div class="brand">
-          <a class="logo" href="leaderboard.html">nunc</a>
-        </div>
-        <div class="nav-actions">
-          <a class="pill" href="leaderboard.html">leaderboard</a>
-          <a class="pill" href="explore.html">explore</a>
-          <a class="pill" href="post.html">post</a>
-          <a class="pill" href="login.html">log in</a>
-        </div>
-      </div>
-    </header>
+<div class="wrap">
+<header>
+  <div class="nav">
+    <div class="brand"><a class="logo" href="leaderboard.html">nunc</a></div>
+    <div class="nav-actions">
+      <a class="pill" href="leaderboard.html">leaderboard</a>
+      <a class="pill" href="explore.html">explore</a>
+      <a class="pill" href="post.html">post</a>
+      <a class="pill" href="login.html">log in</a>
+    </div>
+  </div>
+</header>
 
-    <main>
-      <section class="shell" aria-label="Explore countries">
-        <div class="shell-header">
-          <h2 class="shell-title">Explore</h2>
-          <div class="shell-sub">Countries</div>
-        </div>
-
-        <div class="tools">
-          <div class="searchRow">
-            <div class="search" role="search">
-              <div class="searchIcon" aria-hidden="true">⌕</div>
-              <input id="q" type="text" inputmode="search" autocomplete="off" spellcheck="false"
-                     placeholder="Search countries (e.g., Ireland, Japan, South Africa)" />
-            </div>
-            <button class="btn" id="clearBtn" type="button">clear</button>
-            <button class="btn" id="randomBtn" type="button">random</button>
-          </div>
-          <div class="hint" id="hintText">Type to filter. Press Enter to open the top match.</div>
-        </div>
-
-        <div id="results" class="results" aria-live="polite"></div>
-        <div id="empty" class="empty" style="display:none">No matches.</div>
-      </section>
-    </main>
-
-    <footer>
-      <div class="foot">
-        <div>© nunc</div>
-        <div>terms · transparency · ledger</div>
-      </div>
-    </footer>
+<main>
+<section class="shell">
+  <div class="shell-header">
+    <h2 class="shell-title">Most boosted nation</h2>
+    <div class="shell-sub">Randomised (temporary)</div>
   </div>
 
-  <script>
-    const countries = [
-      'Afghanistan','Albania','Algeria','Andorra','Angola','Antigua and Barbuda','Argentina','Armenia','Australia','Austria',
-      'Azerbaijan','Bahamas','Bahrain','Bangladesh','Barbados','Belarus','Belgium','Belize','Benin','Bhutan',
-      'Bolivia','Bosnia and Herzegovina','Botswana','Brazil','Brunei','Bulgaria','Burkina Faso','Burundi','Cabo Verde','Cambodia',
-      'Cameroon','Canada','Central African Republic','Chad','Chile','China','Colombia','Comoros','Congo','Costa Rica',
-      'Côte d’Ivoire','Croatia','Cuba','Cyprus','Czechia','Denmark','Djibouti','Dominica','Dominican Republic','Ecuador',
-      'Egypt','El Salvador','Equatorial Guinea','Eritrea','Estonia','Eswatini','Ethiopia','Fiji','Finland','France',
-      'Gabon','Gambia','Georgia','Germany','Ghana','Greece','Grenada','Guatemala','Guinea','Guinea-Bissau',
-      'Guyana','Haiti','Honduras','Hungary','Iceland','India','Indonesia','Iran','Iraq','Ireland',
-      'Israel','Italy','Jamaica','Japan','Jordan','Kazakhstan','Kenya','Kiribati','Kosovo','Kuwait',
-      'Kyrgyzstan','Laos','Latvia','Lebanon','Lesotho','Liberia','Libya','Liechtenstein','Lithuania','Luxembourg',
-      'Madagascar','Malawi','Malaysia','Maldives','Mali','Malta','Marshall Islands','Mauritania','Mauritius','Mexico',
-      'Micronesia','Moldova','Monaco','Mongolia','Montenegro','Morocco','Mozambique','Myanmar','Namibia','Nauru',
-      'Nepal','Netherlands','New Zealand','Nicaragua','Niger','Nigeria','North Macedonia','Norway','Oman','Pakistan',
-      'Palau','Palestine','Panama','Papua New Guinea','Paraguay','Peru','Philippines','Poland','Portugal','Qatar',
-      'Romania','Russia','Rwanda','Saint Kitts and Nevis','Saint Lucia','Saint Vincent and the Grenadines','Samoa','San Marino','Sao Tome and Principe','Saudi Arabia',
-      'Senegal','Serbia','Seychelles','Sierra Leone','Singapore','Slovakia','Slovenia','Solomon Islands','Somalia','South Africa','South Korea',
-      'South Sudan','Spain','Sri Lanka','Sudan','Suriname','Sweden','Switzerland','Syria','Tajikistan','Tanzania',
-      'Thailand','Timor-Leste','Togo','Tonga','Trinidad and Tobago','Tunisia','Turkey','Turkmenistan','Tuvalu','Uganda',
-      'Ukraine','United Arab Emirates','United Kingdom','United States','Uruguay','Uzbekistan','Vanuatu','Vatican City','Venezuela','Vietnam',
-      'Yemen','Zambia','Zimbabwe'
-    ];
+  <div class="tools">
+    <div class="searchRow">
+      <div class="search">
+        <div class="searchIcon">⌕</div>
+        <input id="q" type="text" placeholder="Search countries" />
+      </div>
+      <button class="btn" id="clearBtn">clear</button>
+      <button class="btn" id="randomBtn">random</button>
+    </div>
+    <div class="hint">Order is random until boost ledger is live.</div>
+  </div>
 
-    const Q = document.getElementById('q');
-    const RESULTS = document.getElementById('results');
-    const EMPTY = document.getElementById('empty');
-    const CLEAR = document.getElementById('clearBtn');
-    const RANDOM = document.getElementById('randomBtn');
+  <div id="results" class="results"></div>
+  <div id="empty" class="empty" style="display:none">No matches.</div>
+</section>
+</main>
 
-    function norm(s){ return (s || '').trim().toLowerCase(); }
-    function rand(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+<footer>
+  <div class="foot">
+    <div>© nunc</div>
+    <div>terms · transparency · ledger</div>
+  </div>
+</footer>
+</div>
 
-    // Stub navigation target: map.html with a query param.
-    // If your map page uses a different param name, change `country=`.
-    function openCountry(country){
-      const url = `map.html?country=${encodeURIComponent(country)}`;
-      window.location.href = url;
-    }
+<script>
+const countries = [
+'Afghanistan','Albania','Algeria','Andorra','Angola','Antigua and Barbuda','Argentina','Armenia','Australia','Austria','Azerbaijan','Bahamas','Bahrain','Bangladesh','Barbados','Belarus','Belgium','Belize','Benin','Bhutan','Bolivia','Bosnia and Herzegovina','Botswana','Brazil','Brunei','Bulgaria','Burkina Faso','Burundi','Cabo Verde','Cambodia','Cameroon','Canada','Central African Republic','Chad','Chile','China','Colombia','Comoros','Congo','Costa Rica','Côte d’Ivoire','Croatia','Cuba','Cyprus','Czechia','Denmark','Djibouti','Dominica','Dominican Republic','Ecuador','Egypt','El Salvador','Equatorial Guinea','Eritrea','Estonia','Eswatini','Ethiopia','Fiji','Finland','France','Gabon','Gambia','Georgia','Germany','Ghana','Greece','Grenada','Guatemala','Guinea','Guinea-Bissau','Guyana','Haiti','Honduras','Hungary','Iceland','India','Indonesia','Iran','Iraq','Ireland','Israel','Italy','Jamaica','Japan','Jordan','Kazakhstan','Kenya','Kiribati','Kosovo','Kuwait','Kyrgyzstan','Laos','Latvia','Lebanon','Lesotho','Liberia','Libya','Liechtenstein','Lithuania','Luxembourg','Madagascar','Malawi','Malaysia','Maldives','Mali','Malta','Marshall Islands','Mauritania','Mauritius','Mexico','Micronesia','Moldova','Monaco','Mongolia','Montenegro','Morocco','Mozambique','Myanmar','Namibia','Nauru','Nepal','Netherlands','New Zealand','Nicaragua','Niger','Nigeria','North Macedonia','Norway','Oman','Pakistan','Palau','Palestine','Panama','Papua New Guinea','Paraguay','Peru','Philippines','Poland','Portugal','Qatar','Romania','Russia','Rwanda','Saint Kitts and Nevis','Saint Lucia','Saint Vincent and the Grenadines','Samoa','San Marino','Sao Tome and Principe','Saudi Arabia','Senegal','Serbia','Seychelles','Sierra Leone','Singapore','Slovakia','Slovenia','Solomon Islands','Somalia','South Africa','South Korea','South Sudan','Spain','Sri Lanka','Sudan','Suriname','Sweden','Switzerland','Syria','Tajikistan','Tanzania','Thailand','Timor-Leste','Togo','Tonga','Trinidad and Tobago','Tunisia','Turkey','Turkmenistan','Tuvalu','Uganda','Ukraine','United Arab Emirates','United Kingdom','United States','Uruguay','Uzbekistan','Vanuatu','Vatican City','Venezuela','Vietnam','Yemen','Zambia','Zimbabwe'
+];
 
-    function row(country){
-      const r = document.createElement('div');
-      r.className = 'row';
+const Q = document.getElementById('q');
+const RESULTS = document.getElementById('results');
+const EMPTY = document.getElementById('empty');
+const CLEAR = document.getElementById('clearBtn');
+const RANDOM = document.getElementById('randomBtn');
 
-      const left = document.createElement('div');
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
 
-      const c = document.createElement('div');
-      c.className = 'country';
-      c.textContent = country;
+let order = shuffle(countries);
 
-      left.appendChild(c);
+function render(list){
+  RESULTS.innerHTML='';
+  if(!list.length){EMPTY.style.display='block';return}
+  EMPTY.style.display='none';
+  list.forEach((c,i)=>{
+    const row=document.createElement('div');
+    row.className='row';
+    row.innerHTML=`<div><div class="country">#${i+1} — ${c}</div></div><button class="go">open</button>`;
+    row.onclick=()=>location.href=`map.html?country=${encodeURIComponent(c)}`;
+    RESULTS.appendChild(row);
+  });
+}
 
-      const go = document.createElement('button');
-      go.className = 'go';
-      go.type = 'button';
-      go.textContent = 'open';
-      go.setAttribute('aria-label', `Open ${country}`);
-      go.addEventListener('click', (e) => {
-        e.stopPropagation();
-        openCountry(country);
-      });
+function filter(){
+  const q=Q.value.toLowerCase();
+  render(order.filter(c=>c.toLowerCase().includes(q)));
+}
 
-      r.appendChild(left);
-      r.appendChild(go);
+Q.oninput=filter;
+CLEAR.onclick=()=>{Q.value='';filter()};
+RANDOM.onclick=()=>{order=shuffle(countries);filter()};
 
-      r.addEventListener('click', () => openCountry(country));
-
-      return r;
-    }
-
-    function render(list){
-      RESULTS.innerHTML = '';
-      if(!list.length){
-        EMPTY.style.display = 'block';
-        return;
-      }
-      EMPTY.style.display = 'none';
-      const frag = document.createDocumentFragment();
-      for(const c of list) frag.appendChild(row(c));
-      RESULTS.appendChild(frag);
-    }
-
-    function filter(){
-      const q = norm(Q.value);
-      if(!q){
-        render(countries.slice());
-        return;
-      }
-      const out = countries
-        .filter(c => norm(c).includes(q))
-        .sort((a,b) => {
-          const ia = norm(a).indexOf(q);
-          const ib = norm(b).indexOf(q);
-          if(ia !== ib) return ia - ib;
-          return a.localeCompare(b);
-        });
-      render(out);
-    }
-
-    Q.addEventListener('input', filter);
-
-    Q.addEventListener('keydown', (e) => {
-      if(e.key === 'Enter'){
-        const q = norm(Q.value);
-        const out = !q
-          ? countries.slice()
-          : countries.filter(c => norm(c).includes(q)).sort((a,b)=>{
-              const ia = norm(a).indexOf(q);
-              const ib = norm(b).indexOf(q);
-              if(ia !== ib) return ia - ib;
-              return a.localeCompare(b);
-            });
-        if(out.length) openCountry(out[0]);
-      }
-      if(e.key === 'Escape'){
-        Q.value = '';
-        filter();
-      }
-    });
-
-    CLEAR.addEventListener('click', () => {
-      Q.value = '';
-      Q.focus();
-      filter();
-    });
-
-    RANDOM.addEventListener('click', () => {
-      openCountry(rand(countries));
-    });
-
-    // Initial render
-    render(countries.slice());
-  </script>
+render(order);
+</script>
 </body>
 </html>
