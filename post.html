@@ -57,11 +57,57 @@
     .meta{display:flex;gap:10px;align-items:center;color:var(--muted);font-size:14px;flex-wrap:wrap}
     .chip{border:1px solid var(--hair);background:rgba(255,255,255,0.04);padding:6px 10px;border-radius:999px}
 
-    .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--hair);background:var(--pill);border-radius:999px;cursor:pointer;font:inherit}
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--hair);background:var(--pill);border-radius:999px;cursor:pointer;font:inherit;color:var(--text)}
+    .btn:hover{background:var(--pillHover)}
     .btn.gold{border-color:var(--gold);background:var(--goldBg);color:var(--gold);font-weight:700}
+    .btn.gold:hover{background:var(--goldHover)}
+    .btn.ghost{background:transparent}
+    .btn.danger{border-color:rgba(255,77,77,0.45);color:#ffb3b3;background:rgba(255,77,77,0.08)}
+    .btn.danger:hover{background:rgba(255,77,77,0.12)}
 
     .help{margin-top:10px;padding-top:10px;border-top:1px solid var(--hair);color:var(--muted);font-size:14px;}
-    .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:rgba(0,0,0,0.82);border:1px solid var(--hair);padding:10px 12px;border-radius:12px;display:none}
+    .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:rgba(0,0,0,0.82);border:1px solid var(--hair);padding:10px 12px;border-radius:12px;display:none;z-index:50}
+
+    /* payment modal */
+    .modal-backdrop{
+      position:fixed;inset:0;background:rgba(0,0,0,0.62);
+      display:none;align-items:center;justify-content:center;z-index:40;
+      padding:18px;
+    }
+    .modal{
+      width:min(560px,100%);
+      border:1px solid var(--hair);
+      background:linear-gradient(180deg,var(--panel),var(--panel2));
+      border-radius:18px;
+      box-shadow:0 18px 50px rgba(0,0,0,0.55);
+      padding:16px;
+    }
+    .modal h2{margin:0 0 10px;font-size:20px}
+    .modal .muted{color:var(--muted);font-size:14px;margin:0 0 12px}
+    .modal .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+    .modal .grid .cell{display:flex;flex-direction:column;gap:6px}
+    .modal input,.modal select{
+      padding:10px 12px;border-radius:14px;border:1px solid var(--hair);
+      background:rgba(255,255,255,0.03);color:var(--text);font:inherit;font-size:16px;
+      outline:none;
+    }
+    /* fix invisible dropdown options */
+    .modal select option{
+      background:#161616;
+      color:#ffffff;
+    }
+    .modal .summary{
+      border:1px solid var(--hair);
+      background:rgba(255,255,255,0.03);
+      border-radius:14px;
+      padding:10px 12px;
+      display:flex;flex-direction:column;gap:6px;
+      margin:10px 0 12px;
+    }
+    .modal .summary .line{display:flex;justify-content:space-between;gap:10px;color:var(--muted);font-size:14px}
+    .modal .summary .line strong{color:var(--text);font-weight:700}
+    .modal .actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:10px}
+    .fineprint{margin:10px 0 0;color:var(--muted);font-size:12px;line-height:1.35}
   </style>
 </head>
 <body>
@@ -104,37 +150,251 @@
 
   <div class="toast" id="toast"></div>
 
+  <!-- Payment modal -->
+  <div class="modal-backdrop" id="payBackdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="payTitle">
+      <h2 id="payTitle">Pay to boost</h2>
+      <p class="muted">1 USD = 1 boost. Foreign currencies convert to USD at live FX rates.</p>
+
+      <div class="grid">
+        <div class="cell">
+          <label for="payAmount">Amount</label>
+          <input id="payAmount" inputmode="decimal" autocomplete="off" placeholder="10" />
+        </div>
+        <div class="cell">
+          <label for="payCurrency">Currency</label>
+          <select id="payCurrency">
+            <option value="USD">USD</option>
+            <option value="EUR">EUR</option>
+            <option value="GBP">GBP</option>
+            <option value="CAD">CAD</option>
+            <option value="AUD">AUD</option>
+            <option value="NZD">NZD</option>
+            <option value="JPY">JPY</option>
+            <option value="CNY">CNY</option>
+            <option value="KRW">KRW</option>
+            <option value="INR">INR</option>
+            <option value="CHF">CHF</option>
+            <option value="SEK">SEK</option>
+            <option value="NOK">NOK</option>
+            <option value="DKK">DKK</option>
+            <option value="PLN">PLN</option>
+            <option value="CZK">CZK</option>
+            <option value="HUF">HUF</option>
+            <option value="RON">RON</option>
+            <option value="BGN">BGN</option>
+            <option value="TRY">TRY</option>
+            <option value="ILS">ILS</option>
+            <option value="AED">AED</option>
+            <option value="SAR">SAR</option>
+            <option value="BRL">BRL</option>
+            <option value="MXN">MXN</option>
+            <option value="CLP">CLP</option>
+            <option value="COP">COP</option>
+            <option value="PEN">PEN</option>
+            <option value="ZAR">ZAR</option>
+            <option value="NGN">NGN</option>
+            <option value="EGP">EGP</option>
+            <option value="KES">KES</option>
+            <option value="SGD">SGD</option>
+            <option value="HKD">HKD</option>
+            <option value="TWD">TWD</option>
+            <option value="THB">THB</option>
+            <option value="MYR">MYR</option>
+            <option value="IDR">IDR</option>
+            <option value="PHP">PHP</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="summary">
+        <div class="line"><span>FX source</span><strong id="fxSource">—</strong></div>
+        <div class="line"><span>Converted</span><strong id="usdOut">—</strong></div>
+        <div class="line"><span>Boosts</span><strong id="boostOut">—</strong></div>
+      </div>
+
+      <div class="actions">
+        <button class="btn ghost" id="cancelPay">Cancel</button>
+        <button class="btn gold" id="confirmPay">Pay & Post</button>
+      </div>
+
+      <p class="fineprint">
+        This page is static front-end code. It shows a payment-style popup and uses an FX API for conversion, but it does not charge a card.
+        Real payments require a server + a payment processor (e.g., Stripe) and webhook verification.
+      </p>
+    </div>
+  </div>
+
   <script>
     (function(){
       const KEY='nunc_posts_v1',MAX=200,ONE_DAY_MS=86400000;
+
+      // Keep your location countries separate from payment currencies.
       const countries=['Ireland','France','Germany','USA','Japan','Brazil','Canada','South Africa'];
+
       const elText=postText,elCount=charCount,elTTL=ttl,elCountry=country,elToast=toast,elSubmit=submitBtn;
+
+      // payment modal elements
+      const payBackdrop = document.getElementById('payBackdrop');
+      const payAmount   = document.getElementById('payAmount');
+      const payCurrency = document.getElementById('payCurrency');
+      const fxSource    = document.getElementById('fxSource');
+      const usdOut      = document.getElementById('usdOut');
+      const boostOut    = document.getElementById('boostOut');
+      const cancelPay   = document.getElementById('cancelPay');
+      const confirmPay  = document.getElementById('confirmPay');
+
       const pageCountry=countries[Math.floor(Math.random()*countries.length)];
       elCountry.textContent='Location: '+pageCountry;
+
       const now=()=>Date.now();
       const toastMsg=m=>{elToast.textContent=m;elToast.style.display='block';setTimeout(()=>elToast.style.display='none',1800)};
       const hasUrl=s=>/(https?:\/\/|www\.|\.[a-z]{2,})/i.test(s);
       const prune=p=>p.filter(x=>now()-x.createdAt<ONE_DAY_MS);
       const load=()=>JSON.parse(localStorage.getItem(KEY)||'[]');
       const save=p=>localStorage.setItem(KEY,JSON.stringify(p));
+
       const formatExpiry=ts=>{
         const d=new Date(ts);
         return d.toLocaleString(undefined,{hour:'2-digit',minute:'2-digit',hour12:false,day:'2-digit',month:'short',year:'numeric'});
       };
+
       const update=()=>{
         elCount.textContent=elText.value.length+'/'+MAX;
         const expiry=now()+ONE_DAY_MS;
         elTTL.textContent='Expires in 24h: '+formatExpiry(expiry);
       };
+
+      // ---------- payment modal + FX conversion ----------
+      let pendingPostText = '';
+
+      const openPay = ()=>{
+        payBackdrop.style.display='flex';
+        payBackdrop.setAttribute('aria-hidden','false');
+        // defaults
+        if(!payAmount.value) payAmount.value = '1';
+        fxSource.textContent='—';
+        usdOut.textContent='—';
+        boostOut.textContent='—';
+        computeConversion();
+      };
+
+      const closePay = ()=>{
+        payBackdrop.style.display='none';
+        payBackdrop.setAttribute('aria-hidden','true');
+        pendingPostText = '';
+      };
+
+      const parseAmount = (v)=>{
+        // accept "10", "10.5", "10,5"
+        const n = Number(String(v).replace(',','.').trim());
+        return Number.isFinite(n) ? n : NaN;
+      };
+
+      async function convertToUSD(amount, currency){
+        // Live FX conversion via Frankfurter (ECB-based). If blocked/offline, fall back to 1:1.
+        // https://www.frankfurter.app/docs/
+        if(currency === 'USD') return { usd: amount, source: 'USD (no conversion)' };
+
+        const url = 'https://api.frankfurter.app/latest?amount=' + encodeURIComponent(amount) +
+                    '&from=' + encodeURIComponent(currency) + '&to=USD';
+
+        try{
+          const res = await fetch(url, { cache:'no-store' });
+          if(!res.ok) throw new Error('fx_http_'+res.status);
+          const data = await res.json();
+          const usd = data && data.rates && typeof data.rates.USD === 'number' ? data.rates.USD : NaN;
+          if(!Number.isFinite(usd)) throw new Error('fx_parse');
+          return { usd, source: 'Frankfurter (ECB)' };
+        }catch(_){
+          return { usd: amount, source: 'FX unavailable (1:1 fallback)' };
+        }
+      }
+
+      let conversionTimer = null;
+      const computeConversion = ()=>{
+        clearTimeout(conversionTimer);
+        conversionTimer = setTimeout(async ()=>{
+          const amt = parseAmount(payAmount.value);
+          const cur = payCurrency.value;
+
+          if(!Number.isFinite(amt) || amt <= 0){
+            fxSource.textContent='—';
+            usdOut.textContent='—';
+            boostOut.textContent='—';
+            return;
+          }
+
+          fxSource.textContent='Converting…';
+          usdOut.textContent='…';
+          boostOut.textContent='…';
+
+          const r = await convertToUSD(amt, cur);
+          const usd = r.usd;
+
+          // 1 USD = 1 boost; cents discarded (always floor)
+          const boosts = Math.max(0, Math.floor(usd));
+
+          fxSource.textContent = r.source;
+          usdOut.textContent = usd.toFixed(2) + ' USD';
+          boostOut.textContent = boosts + ' boosts';
+        }, 120);
+      };
+
+      payAmount.addEventListener('input', computeConversion);
+      payCurrency.addEventListener('change', computeConversion);
+
+      cancelPay.addEventListener('click', closePay);
+      payBackdrop.addEventListener('click', (e)=>{
+        if(e.target === payBackdrop) closePay();
+      });
+      document.addEventListener('keydown', (e)=>{
+        if(payBackdrop.style.display === 'flex' && e.key === 'Escape') closePay();
+      });
+
+      const finalizePost = async ()=>{
+        const amt = parseAmount(payAmount.value);
+        const cur = payCurrency.value;
+
+        if(!Number.isFinite(amt) || amt <= 0) return toastMsg('Payment blocked: invalid amount.');
+
+        const r = await convertToUSD(amt, cur);
+        const boosts = Math.max(0, Math.floor(r.usd));
+
+        if(boosts < 1) return toastMsg('Payment blocked: must equal at least 1 boost (>= $1).');
+
+        const p={
+          id:Math.random().toString(36),
+          text:pendingPostText,
+          country:pageCountry,
+          createdAt:now(),
+          expiresAt:now()+ONE_DAY_MS,
+          boosts:boosts
+        };
+
+        const posts=prune(load());
+        posts.unshift(p);
+        save(posts);
+
+        closePay();
+        toastMsg('Posted with '+boosts+' boosts.');
+        setTimeout(()=>location.href='leaderboard.html',450);
+      };
+
+      confirmPay.addEventListener('click', finalizePost);
+
+      // ---------- submit flow ----------
       const submit=()=>{
         const t=elText.value.trim();
-        if(!t)return toastMsg('Empty post blocked.');
-        if(hasUrl(t))return toastMsg('Links are blocked.');
-        const p={id:Math.random().toString(36),text:t,country:pageCountry,createdAt:now(),expiresAt:now()+ONE_DAY_MS,boosts:0};
-        const posts=prune(load());posts.unshift(p);save(posts);
-        toastMsg('Posted.');setTimeout(()=>location.href='leaderboard.html',450);
+        if(!t) return toastMsg('Empty post blocked.');
+        if(hasUrl(t)) return toastMsg('Links are blocked.');
+        pendingPostText = t;
+        openPay();
       };
-      update();elText.oninput=update;elSubmit.onclick=submit;
+
+      update();
+      elText.oninput=update;
+      elSubmit.onclick=submit;
     })();
   </script>
 </body>
