@@ -114,12 +114,12 @@
   <div class="wrap">
     <header>
       <div class="nav">
-        <a class="logo" href="leaderboard.html">nunc</a>
+        <a class="logo" href="./leaderboard.html">nunc</a>
         <div class="nav-actions">
-          <a class="pill" href="leaderboard.html">leaderboard</a>
-          <a class="pill" href="explore.html">explore</a>
-          <a class="pill" href="post.html">post</a>
-          <a class="pill" href="login.html">log in</a>
+          <a class="pill" href="./leaderboard.html">leaderboard</a>
+          <a class="pill" href="./explore.html">explore</a>
+          <a class="pill" href="./post.html">post</a>
+          <a class="pill" href="./login.html">log in</a>
         </div>
       </div>
     </header>
@@ -232,7 +232,12 @@
       // Keep your location countries separate from payment currencies.
       const countries=['Ireland','France','Germany','USA','Japan','Brazil','Canada','South Africa'];
 
-      const elText=postText,elCount=charCount,elTTL=ttl,elCountry=country,elToast=toast,elSubmit=submitBtn;
+      const elText=document.getElementById('postText');
+      const elCount=document.getElementById('charCount');
+      const elTTL=document.getElementById('ttl');
+      const elCountry=document.getElementById('country');
+      const elToast=document.getElementById('toast');
+      const elSubmit=document.getElementById('submitBtn');
 
       // payment modal elements
       const payBackdrop = document.getElementById('payBackdrop');
@@ -378,7 +383,7 @@
 
         closePay();
         toastMsg('Posted with '+boosts+' boosts.');
-        setTimeout(()=>location.href='leaderboard.html',450);
+        setTimeout(()=>location.href='./leaderboard.html',450);
       };
 
       confirmPay.addEventListener('click', finalizePost);
