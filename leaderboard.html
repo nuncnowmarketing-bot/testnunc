@@ -430,8 +430,7 @@
   </div>
 
   <script>
-    // Twitter/Threads-like feed behavior: render in batches; append when sentinel enters viewport.
-    // For now: 50 sample posts, but infinite loading loop by recycling generated content.
+    // Leaderboard feed: shows locally saved posts from post.html (nunc_posts_v1), then fills with samples.
 
     const FEED = document.getElementById('feed');
     const SENTINEL = document.getElementById('sentinel');
@@ -439,50 +438,20 @@
     const STATUS_TEXT = document.getElementById('statusText');
     const TOAST = document.getElementById('toast');
 
-    const countries = [
-      'Japan','Germany','Brazil','Canada','South Africa','Ireland','France','Spain','Italy','Netherlands',
-      'Sweden','Norway','Denmark','Finland','Poland','Czechia','Portugal','Greece','Turkey','Egypt',
-      'Nigeria','Kenya','Morocco','India','Pakistan','Bangladesh','Thailand','Vietnam','Indonesia','Philippines',
-      'Australia','New Zealand','Mexico','Argentina','Chile','Colombia','Peru','United States','United Kingdom','Switzerland',
-      'Austria','Belgium','Hungary','Romania','Bulgaria','Ukraine','Israel','UAE','Saudi Arabia','Singapore'
-    ];
+    // Storage keys
+    const POSTS_KEY  = 'nunc_posts_v1';    // array of {id,text,country,createdAt,expiresAt,boosts}
+    const BOOSTS_KEY = 'nunc_boosts_v1';   // map { [postId]: number } (used by boost modal)
 
-    const prompts = [
-      'Conviction beats correctness when incentives are misaligned.',
-      'If a platform hides the price, it is selling you to someone else.',
-      'Attention is a budget. Most people spend it like it is infinite.',
-      'Transparency hurts because it removes narratives.',
-      'Markets pay for confidence, then punish for being wrong.',
-      'If you cannot explain it simply, you are outsourcing thinking.',
-      'Most "debates" are status games disguised as logic.',
-      'The algorithm is not neutral. It is a business model.',
-      'Outrage is a distribution strategy.',
-      'The easiest way to win is to choose games with honest scoring.',
-      'Clarity is expensive. Vagueness is subsidised.',
-      'Every system optimises for what it measures, not what it claims to value.',
-      'Most people confuse confidence with competence.',
-      'Visibility without accountability produces noise.',
-      'Incentives explain behaviour better than morality.'
-    ];
+    const ONE_DAY_MS = 86400000;
+    const now = () => Date.now();
 
-    const timeLabels = ['just now','1m','3m','6m','10m','18m','25m','40m','1h','2h','4h','7h','12h','18h','23h'];
+    const toastMsg = (m) => {
+      TOAST.textContent = m;
+      TOAST.style.display = 'block';
+      setTimeout(() => TOAST.style.display = 'none', 1800);
+    };
 
-    function rand(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
-
-    function randomText(maxChars){
-      let out = '';
-      while(out.length < maxChars){
-        const next = rand(prompts);
-        if(out.length + next.length + 1 > maxChars) break;
-        out += (out ? ' ' : '') + next;
-      }
-      if(out.length === 0) out = rand(prompts);
-      return out;
-    }
-
-    // -------------------- boost payment modal logic (copied behavior) --------------------
-    const BOOSTS_KEY = 'nunc_boosts_v1'; // { [postId]: number }
-
+    // ---------- Payment modal + FX ----------
     const payBackdrop = document.getElementById('payBackdrop');
     const payAmount   = document.getElementById('payAmount');
     const payCurrency = document.getElementById('payCurrency');
@@ -491,8 +460,6 @@
     const boostOut    = document.getElementById('boostOut');
     const cancelPay   = document.getElementById('cancelPay');
     const confirmPay  = document.getElementById('confirmPay');
-
-    const toastMsg=m=>{TOAST.textContent=m;TOAST.style.display='block';setTimeout(()=>TOAST.style.display='none',1800)};
 
     const parseAmount = (v)=>{
       const n = Number(String(v).replace(',','.').trim());
@@ -535,8 +502,6 @@
 
         const r = await convertToUSD(amt, cur);
         const usd = r.usd;
-
-        // cents discarded (always floor)
         const boosts = Math.max(0, Math.floor(usd));
 
         fxSource.textContent = r.source;
@@ -562,7 +527,10 @@
       payBackdrop.style.display='none';
       payBackdrop.setAttribute('aria-hidden','true');
       pendingBoostPostId = '';
-      pendingBoostMetaEl = null;
+      pendingBoostIsSample = false;
+      pendingBoostText = '';
+      pendingBoostCountry = '';
+      pendingBoostCreatedAt = 0;
     };
 
     cancelPay.addEventListener('click', closePay);
@@ -575,11 +543,32 @@
     };
     const saveBoosts = (m)=>localStorage.setItem(BOOSTS_KEY, JSON.stringify(m));
 
-    let pendingBoostPostId = '';
-    let pendingBoostMetaEl = null;
+    const loadPosts = ()=>{
+      try{ return JSON.parse(localStorage.getItem(POSTS_KEY) || '[]') || []; }
+      catch(_){ return []; }
+    };
+    const savePosts = (arr)=>localStorage.setItem(POSTS_KEY, JSON.stringify(arr));
+
+    function prunePosts(posts){
+      const alive = posts.filter(p => p && typeof p.expiresAt === 'number' ? p.expiresAt > now() : (p && typeof p.createdAt === 'number' ? (now()-p.createdAt) < ONE_DAY_MS : true));
+      if(alive.length !== posts.length) savePosts(alive);
+      return alive;
+    }
+
+    function mergeBoostsIntoPosts(posts){
+      const map = loadBoosts();
+      let changed = false;
+      const out = posts.map(p => {
+        if(!p || !p.id) return p;
+        const b = Number(map[p.id] || 0);
+        if(Number(p.boosts || 0) !== b){ changed = true; return { ...p, boosts: b }; }
+        return p;
+      });
+      if(changed) savePosts(out);
+      return out;
+    }
 
     function setMetaBoostCount(metaEl, n){
-      // meta layout: country · time · X boosts
       let span = metaEl.querySelector('[data-boost-count]');
       if(!span){
         const dot = document.createElement('span');
@@ -591,6 +580,12 @@
       }
       span.textContent = n + ' boosts';
     }
+
+    let pendingBoostPostId = '';
+    let pendingBoostIsSample = false;
+    let pendingBoostText = '';
+    let pendingBoostCountry = '';
+    let pendingBoostCreatedAt = 0;
 
     async function finalizeBoost(){
       const amt = parseAmount(payAmount.value);
@@ -608,26 +603,94 @@
       map[pendingBoostPostId] = next;
       saveBoosts(map);
 
-      if(pendingBoostMetaEl) setMetaBoostCount(pendingBoostMetaEl, next);
+      // Sync into posts list. If user boosted a sample post, promote it into POSTS_KEY so it doesn't disappear.
+      const posts = prunePosts(loadPosts());
+      const idx = posts.findIndex(p => p && p.id === pendingBoostPostId);
+
+      if(idx >= 0){
+        posts[idx].boosts = next;
+        savePosts(posts);
+      } else if(pendingBoostIsSample && pendingBoostText){
+        const createdAt = pendingBoostCreatedAt || now();
+        const p = {
+          id: pendingBoostPostId,
+          text: String(pendingBoostText).slice(0,200),
+          country: pendingBoostCountry || rand(sampleCountries),
+          createdAt,
+          expiresAt: createdAt + ONE_DAY_MS,
+          boosts: next
+        };
+        posts.unshift(p);
+        savePosts(posts);
+      }
 
       closePay();
       toastMsg('Boosted +'+add+'.');
+      renderFresh();
     }
 
     confirmPay.addEventListener('click', finalizeBoost);
 
-    // -------------------- feed rendering --------------------
-    function makePost(rank){
-      const id = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    // ---------- Rendering ----------
+    const sampleCountries = [
+      'Japan','Germany','Brazil','Canada','South Africa','Ireland','France','Spain','Italy','Netherlands',
+      'Sweden','Norway','Denmark','Finland','Poland','Czechia','Portugal','Greece','Turkey','Egypt',
+      'Nigeria','Kenya','Morocco','India','Pakistan','Bangladesh','Thailand','Vietnam','Indonesia','Philippines',
+      'Australia','New Zealand','Mexico','Argentina','Chile','Colombia','Peru','United States','United Kingdom','Switzerland',
+      'Austria','Belgium','Hungary','Romania','Bulgaria','Ukraine','Israel','UAE','Saudi Arabia','Singapore'
+    ];
 
-      const maxLen = Math.floor(Math.random() * 200) + 1; // 1–200 chars
-      const title = randomText(maxLen).slice(0, maxLen);
-      const country = rand(countries);
-      const t = rand(timeLabels);
+    const prompts = [
+      'Conviction beats correctness when incentives are misaligned.',
+      'If a platform hides the price, it is selling you to someone else.',
+      'Attention is a budget. Most people spend it like it is infinite.',
+      'Transparency hurts because it removes narratives.',
+      'Markets pay for confidence, then punish for being wrong.',
+      'If you cannot explain it simply, you are outsourcing thinking.',
+      'Most "debates" are status games disguised as logic.',
+      'The algorithm is not neutral. It is a business model.',
+      'Outrage is a distribution strategy.',
+      'The easiest way to win is to choose games with honest scoring.',
+      'Clarity is expensive. Vagueness is subsidised.',
+      'Every system optimises for what it measures, not what it claims to value.',
+      'Most people confuse confidence with competence.',
+      'Visibility without accountability produces noise.',
+      'Incentives explain behaviour better than morality.'
+    ];
 
+    const timeLabels = ['just now','1m','3m','6m','10m','18m','25m','40m','1h','2h','4h','7h','12h','18h','23h'];
+
+    function rand(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+    function randomText(maxChars){
+      let out = '';
+      while(out.length < maxChars){
+        const next = rand(prompts);
+        if(out.length + next.length + 1 > maxChars) break;
+        out += (out ? ' ' : '') + next;
+      }
+      if(out.length === 0) out = rand(prompts);
+      return out;
+    }
+
+    function fmtTimeAgo(ts){
+      const diff = Math.max(0, now() - ts);
+      const mins = Math.floor(diff / 60000);
+      if(mins <= 0) return 'just now';
+      if(mins < 60) return mins + 'm';
+      const hrs = Math.floor(mins / 60);
+      if(hrs < 24) return hrs + 'h';
+      return '1d';
+    }
+
+    function makeRow({ rank, id, text, country, timeLabel, boosts, isSample, createdAt }){
       const row = document.createElement('div');
       row.className = 'post';
       row.dataset.postId = id;
+      row.dataset.sample = isSample ? '1' : '0';
+      row.dataset.text = text;
+      row.dataset.country = country;
+      row.dataset.createdAt = String(createdAt || 0);
 
       const rankEl = document.createElement('div');
       rankEl.className = 'rank';
@@ -638,60 +701,116 @@
 
       const titleEl = document.createElement('div');
       titleEl.className = 'title';
-      titleEl.textContent = title;
+      titleEl.textContent = text;
 
       const meta = document.createElement('div');
       meta.className = 'meta';
-      meta.innerHTML = `${country} <span class="dot"></span> ${t}`;
+      meta.innerHTML = `${country} <span class="dot"></span> ${timeLabel}`;
 
-      // apply saved boosts (if any)
-      const saved = loadBoosts();
-      const count = Number(saved[id] || 0);
-      if(count > 0) setMetaBoostCount(meta, count);
+      if(Number(boosts || 0) > 0) setMetaBoostCount(meta, Number(boosts || 0));
 
       content.appendChild(titleEl);
       content.appendChild(meta);
 
-      const boost = document.createElement('button');
-      boost.className = 'boost';
-      boost.type = 'button';
-      boost.setAttribute('aria-label', 'boost');
-      boost.textContent = '▲';
-
-      boost.addEventListener('click', ()=>{
+      const boostBtn = document.createElement('button');
+      boostBtn.className = 'boost';
+      boostBtn.type = 'button';
+      boostBtn.setAttribute('aria-label', 'boost');
+      boostBtn.textContent = '▲';
+      boostBtn.addEventListener('click', ()=>{
         pendingBoostPostId = id;
-        pendingBoostMetaEl = meta;
+        pendingBoostIsSample = !!isSample;
+        pendingBoostText = text;
+        pendingBoostCountry = country;
+        pendingBoostCreatedAt = Number(createdAt || 0);
         openPay();
       });
 
       row.appendChild(rankEl);
       row.appendChild(content);
-      row.appendChild(boost);
+      row.appendChild(boostBtn);
 
       return row;
     }
-
-    let nextRank = 1;
-    let loaded = 0;
-    const BATCH = 12;
 
     function setLoading(isLoading){
       if(isLoading) STATUS.classList.add('loading');
       else STATUS.classList.remove('loading');
     }
 
+    let sampleRankStart = 1;
+    let loaded = 0;
+    const BATCH = 12;
+
     function updateStatus(){
       STATUS_TEXT.textContent = `Loaded ${loaded} posts`;
     }
 
-    function appendBatch(){
+    function renderFresh(){
+      // Clear and rebuild from saved posts
+      FEED.innerHTML = '';
+      loaded = 0;
+
+      let posts = prunePosts(loadPosts());
+      posts = mergeBoostsIntoPosts(posts);
+
+      // TRUE LEADERBOARD ORDER:
+      // 1) boosts DESC
+      // 2) createdAt DESC
+      // 3) id ASC (stable tie‑break)
+      posts.sort((a,b)=>{
+        const ba = Number(a?.boosts || 0), bb = Number(b?.boosts || 0);
+        if(bb !== ba) return bb - ba;
+        const ta = Number(a?.createdAt || 0), tb = Number(b?.createdAt || 0);
+        if(tb !== ta) return tb - ta;
+        return String(a?.id||'').localeCompare(String(b?.id||''));
+      });
+
+      const frag = document.createDocumentFragment();
+      let rank = 1;
+      for(const p of posts){
+        if(!p || !p.id || !p.text) continue;
+        frag.appendChild(makeRow({
+          rank,
+          id: p.id,
+          text: String(p.text).slice(0,200),
+          country: p.country || rand(sampleCountries),
+          timeLabel: p.createdAt ? fmtTimeAgo(p.createdAt) : rand(timeLabels),
+          boosts: Number(p.boosts || 0),
+          isSample: false,
+          createdAt: Number(p.createdAt || 0)
+        }));
+        rank++;
+        loaded++;
+      }
+      FEED.appendChild(frag);
+
+      // Next ranks for samples start AFTER real posts
+      sampleRankStart = rank;
+      updateStatus();
+    }
+
+    function appendSampleBatch(){
       setLoading(true);
       window.setTimeout(() => {
         const frag = document.createDocumentFragment();
         for(let i=0;i<BATCH;i++){
-          const node = makePost(nextRank);
-          frag.appendChild(node);
-          nextRank++;
+          const maxLen = Math.floor(Math.random() * 200) + 1;
+          const text = randomText(maxLen).slice(0, maxLen);
+          const id = 'sample_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+          const ctry = rand(sampleCountries);
+          const createdAt = now();
+          frag.appendChild(makeRow({
+            rank: sampleRankStart,
+            id,
+            text,
+            country: ctry,
+            timeLabel: rand(timeLabels),
+            boosts: 0,
+            isSample: true,
+            createdAt
+          }));
+          sampleRankStart++;
           loaded++;
         }
         FEED.appendChild(frag);
@@ -700,19 +819,19 @@
       }, 220);
     }
 
-    appendBatch();
-    appendBatch();
+    // Initial render + seed samples to avoid empty feed
+    renderFresh();
+    appendSampleBatch();
 
     const io = new IntersectionObserver((entries) => {
       for(const e of entries){
         if(e.isIntersecting){
-          appendBatch();
+          appendSampleBatch();
         }
       }
     }, { root:null, rootMargin:'600px 0px', threshold:0 });
 
     io.observe(SENTINEL);
-    updateStatus();
   </script>
 </body>
 </html>
