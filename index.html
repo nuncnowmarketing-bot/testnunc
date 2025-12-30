@@ -64,15 +64,6 @@
       line-height:1;
     }
 
-    .slogan{
-      font-size:14px;
-      color:var(--muted);
-      border-left:1px solid var(--hair);
-      padding-left:12px;
-      line-height:1.2;
-      white-space:nowrap;
-    }
-
     .nav-actions{
       display:flex;
       gap:10px;
@@ -85,6 +76,7 @@
       background:var(--pill);
       font-size:14px;
       font-family:inherit;
+      display:inline-block;
     }
 
     .pill:hover{background:var(--pillHover)}
@@ -197,13 +189,13 @@
       <div class="nav">
         <div class="brand">
           <div class="logo">nunc</div>
-          
         </div>
+
         <div class="nav-actions">
-          <div class="pill">leaderboard</div>
-          <div class="pill">map</div>
-          <div class="pill">post</div>
-          <div class="pill">log in</div>
+          <a class="pill" href="index.html">leaderboard</a>
+          <a class="pill" href="map.html">map</a>
+          <a class="pill" href="post.html">post</a>
+          <a class="pill" href="login.html">log in</a>
         </div>
       </div>
     </header>
