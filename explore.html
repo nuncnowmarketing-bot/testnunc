@@ -234,9 +234,9 @@
 <div class="wrap">
   <header>
     <div class="nav">
-      <div class="brand"><a class="logo" href="leaderboard.html">nunc</a></div>
+      <div class="brand"><a class="logo" href="index.html">nunc</a></div>
       <div class="nav-actions">
-        <a class="pill" href="leaderboard.html">leaderboard</a>
+        <a class="pill" href="index.html">leaderboard</a>
         <a class="pill" href="explore.html">explore</a>
         <a class="pill" href="post.html">post</a>
         <a class="pill" href="login.html">log in</a>
@@ -258,7 +258,7 @@
             <input id="q" type="text" placeholder="Search countries" />
           </div>
         </div>
-        <div class="hint">Ranking uses boosts from posts created in <code>post.html</code> and boosted in <code>leaderboard.html</code> (localStorage ledger).</div>
+        <div class="hint">Ranking uses boosts from posts created in <code>post.html</code> and boosted in <code>index.html</code> (localStorage ledger).</div>
       </div>
 
       <div id="results" class="results"></div>
@@ -276,7 +276,7 @@
 
 <script>
 (() => {
-  // Shared storage keys (must match post.html + leaderboard.html)
+  // Shared storage keys (must match post.html + index.html)
   const POSTS_KEY  = 'nunc_posts_v1';   // array of {id,text,country,createdAt,expiresAt,boosts}
   const BOOSTS_KEY = 'nunc_boosts_v1';  // map { [postId]: number }
   const ONE_DAY_MS = 86400000;
