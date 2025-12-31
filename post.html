@@ -357,6 +357,23 @@
         if(payBackdrop.style.display === 'flex' && e.key === 'Escape') closePay();
       });
 
+      // Ensure boosted-on-post amount is reflected in leaderboard ranking.
+      // Leaderboard should sort by `boosts` (desc) and use that as the displayed boost count.
+      // This page already persists `boosts` into localStorage; this migration makes sure
+      // older posts missing `boosts` are treated as 0.
+      const migrateBoostsField = ()=>{
+        const posts = load();
+        let changed = false;
+        for(const p of posts){
+          if(typeof p.boosts !== 'number' || !Number.isFinite(p.boosts)){
+            p.boosts = 0;
+            changed = true;
+          }
+        }
+        if(changed) save(posts);
+      };
+      migrateBoostsField();
+
       const finalizePost = async ()=>{
         const amt = parseAmount(payAmount.value);
         const cur = payCurrency.value;
