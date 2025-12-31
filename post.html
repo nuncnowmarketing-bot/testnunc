@@ -227,7 +227,7 @@
 
   <script>
     (function(){
-      const KEY='nunc_posts_v1',MAX=200,ONE_DAY_MS=86400000;
+      const KEYS=['nunc_posts_v1','nunc_posts','nunc_leaderboard_posts','nunc_leaderboard_v1'],MAX=200,ONE_DAY_MS=86400000;
 
       // Keep your location countries separate from payment currencies.
       const countries=['Ireland','France','Germany','USA','Japan','Brazil','Canada','South Africa'];
@@ -256,8 +256,32 @@
       const toastMsg=m=>{elToast.textContent=m;elToast.style.display='block';setTimeout(()=>elToast.style.display='none',1800)};
       const hasUrl=s=>/(https?:\/\/|www\.|\.[a-z]{2,})/i.test(s);
       const prune=p=>p.filter(x=>now()-x.createdAt<ONE_DAY_MS);
-      const load=()=>JSON.parse(localStorage.getItem(KEY)||'[]');
-      const save=p=>localStorage.setItem(KEY,JSON.stringify(p));
+
+      const readKey=(k)=>{
+        try{ return JSON.parse(localStorage.getItem(k)||'[]'); }catch(_){ return []; }
+      };
+
+      const loadAll=()=>{
+        const seen=new Set();
+        const out=[];
+        for(const k of KEYS){
+          for(const p of readKey(k)){
+            if(!p || !p.id) continue;
+            if(seen.has(p.id)) continue;
+            seen.add(p.id);
+            out.push(p);
+          }
+        }
+        return out;
+      };
+
+      const saveAll=(posts)=>{
+        for(const k of KEYS){
+          localStorage.setItem(k, JSON.stringify(posts));
+        }
+        // explicit cross-page refresh signal
+        localStorage.setItem('nunc_posts_updated_at', String(now()));
+      };
 
       const formatExpiry=ts=>{
         const d=new Date(ts);
@@ -362,7 +386,7 @@
       // This page already persists `boosts` into localStorage; this migration makes sure
       // older posts missing `boosts` are treated as 0.
       const migrateBoostsField = ()=>{
-        const posts = load();
+        const posts = loadAll();
         let changed = false;
         for(const p of posts){
           if(typeof p.boosts !== 'number' || !Number.isFinite(p.boosts)){
@@ -370,7 +394,7 @@
             changed = true;
           }
         }
-        if(changed) save(posts);
+        if(changed) saveAll(posts);
       };
       migrateBoostsField();
 
@@ -391,12 +415,35 @@
           country:pageCountry,
           createdAt:now(),
           expiresAt:now()+ONE_DAY_MS,
-          boosts:boosts
+          // canonical field
+          boosts:boosts,
+          // aliases for any leaderboard implementation that uses different names
+          boost:boosts,
+          boostCount:boosts,
+          score:boosts,
+          points:boosts
         };
 
-        const posts=prune(load());
+        const posts=prune(loadAll());
         posts.unshift(p);
-        save(posts);
+        // HARD GUARANTEE: sort immediately by boost score desc, then createdAt desc
+        posts.sort((a,b)=>{
+          const ab = Number.isFinite(a.boosts) ? a.boosts : (Number.isFinite(a.score) ? a.score : 0);
+          const bb = Number.isFinite(b.boosts) ? b.boosts : (Number.isFinite(b.score) ? b.score : 0);
+          const d = bb - ab;
+          if(d !== 0) return d;
+          return (b.createdAt||0) - (a.createdAt||0);
+        });
+        saveAll(posts);
+
+        // store last post info for leaderboards that patch in-place
+        localStorage.setItem('nunc_last_post_id', p.id);
+        localStorage.setItem('nunc_last_post_boosts', String(boosts));
+
+        // force same-tab listeners
+        window.dispatchEvent(new Event('nunc:postsUpdated'));
+        // force storage event so leaderboard updates instantly
+        window.dispatchEvent(new Event('storage'));
 
         closePay();
         toastMsg('Posted with '+boosts+' boosts.');
