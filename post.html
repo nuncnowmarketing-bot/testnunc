@@ -5,111 +5,116 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>nunc — Make a post</title>
   <link rel="stylesheet" href="./assets/app.css">
-  <style>
-    :root{
-      --bg:#121212;
-      --panel:#161616;
-      --panel2:#1b1b1b; 
-      --text:#ffffff;
-      --muted:rgba(255,255,255,0.70);
-      --hair:rgba(255,255,255,0.12);
-      --pill:rgba(255,255,255,0.06);
-      --pillHover:rgba(255,255,255,0.10);
-      --danger:#ff4d4d;
-      --ok:#7CFCB2;
-      --gold:#d4af37;
-      --goldBg:rgba(212,175,55,0.15);
-      --goldHover:rgba(212,175,55,0.25);
-    }
+<!-- Replace your current <style>…</style> in post.html with this (page-specific only).
+     This assumes assets/app.css contains the shared globals (variables, body, header/nav/pill, main base, footer, .btn base). -->
+<style>
+  /* post page layout */
+  main{
+    max-width:980px;
+    margin:0 auto;
+    padding:18px 16px 48px;
+    display:flex;
+    justify-content:center;
+    align-items:flex-start;
+  }
 
-    *{box-sizing:border-box}
-    html,body{height:100%}
+  .card{
+    margin-top:8vh;
+    border:1px solid var(--hair);
+    background:linear-gradient(180deg,var(--panel),var(--panel2));
+    border-radius:18px;
+    padding:18px 18px 14px;
+    box-shadow:0 12px 30px rgba(0,0,0,0.35);
+    width:min(720px, 100%);
+  }
 
-    body{
-      margin:0;
-      background:var(--bg);
-      color:var(--text);
-      font-family:Garamond,"EB Garamond","Cormorant Garamond","Times New Roman",serif;
-      letter-spacing:0.2px;
-    }
+  h1{margin:0 0 10px;font-size:24px}
+  .sub{margin:0 0 16px;color:var(--muted);font-size:15px}
+  .field{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+  label{font-size:15px;color:var(--muted)}
 
-    a{color:inherit; text-decoration:none}
+  textarea{
+    width:100%;
+    min-height:96px;
+    resize:none;
+    padding:12px;
+    border-radius:14px;
+    border:1px solid var(--hair);
+    background:rgba(255,255,255,0.03);
+    color:var(--text);
+    font:inherit;
+    font-size:17px;
+    line-height:1.3;
+  }
 
-    .wrap{min-height:100%;display:flex;flex-direction:column}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .meta{display:flex;gap:10px;align-items:center;color:var(--muted);font-size:14px;flex-wrap:wrap}
+  .chip{border:1px solid var(--hair);background:rgba(255,255,255,0.04);padding:6px 10px;border-radius:999px}
 
-    header{position:sticky;top:0;background:rgba(18,18,18,0.94);border-bottom:1px solid var(--hair);z-index:10}
-    .nav{max-width:1080px;margin:0 auto;padding:18px 20px;display:flex;align-items:center;justify-content:space-between}
-    .logo{font-size:30px;font-weight:600;line-height:1}
-    .nav-actions{display:flex;gap:10px}
-    .pill{padding:8px 14px;border:1px solid var(--hair);border-radius:999px;background:var(--pill);font-size:14px;font-family:inherit;text-transform:lowercase}
-    .pill:hover{background:var(--pillHover)}
+  /* keep only button variants that are NOT already in assets/app.css */
+  .btn.danger{border-color:rgba(255,77,77,0.45);color:#ffb3b3;background:rgba(255,77,77,0.08)}
+  .btn.danger:hover{background:rgba(255,77,77,0.12)}
 
-    main{flex:1;max-width:980px;margin:0 auto;padding:18px 16px 48px;display:flex;justify-content:center;align-items:flex-start;}
+  .help{margin-top:10px;padding-top:10px;border-top:1px solid var(--hair);color:var(--muted);font-size:14px;}
+  .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:rgba(0,0,0,0.82);border:1px solid var(--hair);padding:10px 12px;border-radius:12px;display:none;z-index:50}
 
-    .card{margin-top:8vh;border:1px solid var(--hair);background:linear-gradient(180deg,var(--panel),var(--panel2));border-radius:18px;padding:18px 18px 14px;box-shadow:0 12px 30px rgba(0,0,0,0.35);width:min(720px, 100%);}
+  /* payment modal (post-specific) */
+  .modal-backdrop{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.62);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:40;
+    padding:18px;
+  }
 
-    h1{margin:0 0 10px;font-size:24px}
-    .sub{margin:0 0 16px;color:var(--muted);font-size:15px}
-    .field{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
-    label{font-size:15px;color:var(--muted)}
+  .modal{
+    width:min(560px,100%);
+    border:1px solid var(--hair);
+    background:linear-gradient(180deg,var(--panel),var(--panel2));
+    border-radius:18px;
+    box-shadow:0 18px 50px rgba(0,0,0,0.55);
+    padding:16px;
+  }
 
-    textarea{width:100%;min-height:96px;resize:none;padding:12px;border-radius:14px;border:1px solid var(--hair);background:rgba(255,255,255,0.03);color:var(--text);font:inherit;font-size:17px;line-height:1.3;}
-    .row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-    .meta{display:flex;gap:10px;align-items:center;color:var(--muted);font-size:14px;flex-wrap:wrap}
-    .chip{border:1px solid var(--hair);background:rgba(255,255,255,0.04);padding:6px 10px;border-radius:999px}
+  .modal h2{margin:0 0 10px;font-size:20px}
+  .modal .muted{color:var(--muted);font-size:14px;margin:0 0 12px}
+  .modal .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+  .modal .grid .cell{display:flex;flex-direction:column;gap:6px}
 
-    .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--hair);background:var(--pill);border-radius:999px;cursor:pointer;font:inherit;color:var(--text)}
-    .btn:hover{background:var(--pillHover)}
-    .btn.gold{border-color:var(--gold);background:var(--goldBg);color:var(--gold);font-weight:700}
-    .btn.gold:hover{background:var(--goldHover)}
-    .btn.ghost{background:transparent}
-    .btn.danger{border-color:rgba(255,77,77,0.45);color:#ffb3b3;background:rgba(255,77,77,0.08)}
-    .btn.danger:hover{background:rgba(255,77,77,0.12)}
+  .modal input,
+  .modal select{
+    padding:10px 12px;
+    border-radius:14px;
+    border:1px solid var(--hair);
+    background:rgba(255,255,255,0.03);
+    color:var(--text);
+    font:inherit;
+    font-size:16px;
+    outline:none;
+  }
 
-    .help{margin-top:10px;padding-top:10px;border-top:1px solid var(--hair);color:var(--muted);font-size:14px;}
-    .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:rgba(0,0,0,0.82);border:1px solid var(--hair);padding:10px 12px;border-radius:12px;display:none;z-index:50}
+  .modal select option{background:#161616;color:#ffffff;}
 
-    /* payment modal */
-    .modal-backdrop{
-      position:fixed;inset:0;background:rgba(0,0,0,0.62);
-      display:none;align-items:center;justify-content:center;z-index:40;
-      padding:18px;
-    }
-    .modal{
-      width:min(560px,100%);
-      border:1px solid var(--hair);
-      background:linear-gradient(180deg,var(--panel),var(--panel2));
-      border-radius:18px;
-      box-shadow:0 18px 50px rgba(0,0,0,0.55);
-      padding:16px;
-    }
-    .modal h2{margin:0 0 10px;font-size:20px}
-    .modal .muted{color:var(--muted);font-size:14px;margin:0 0 12px}
-    .modal .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
-    .modal .grid .cell{display:flex;flex-direction:column;gap:6px}
-    .modal input,.modal select{
-      padding:10px 12px;border-radius:14px;border:1px solid var(--hair);
-      background:rgba(255,255,255,0.03);color:var(--text);font:inherit;font-size:16px;
-      outline:none;
-    }
-    /* fix invisible dropdown options */
-    .modal select option{
-      background:#161616;
-      color:#ffffff;
-    }
-    .modal .summary{
-      border:1px solid var(--hair);
-      background:rgba(255,255,255,0.03);
-      border-radius:14px;
-      padding:10px 12px;
-      display:flex;flex-direction:column;gap:6px;
-      margin:10px 0 12px;
-    }
-    .modal .summary .line{display:flex;justify-content:space-between;gap:10px;color:var(--muted);font-size:14px}
-    .modal .summary .line strong{color:var(--text);font-weight:700}
-    .modal .actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:10px}
-    .fineprint{margin:10px 0 0;color:var(--muted);font-size:12px;line-height:1.35}
-  </style>
+  .modal .summary{
+    border:1px solid var(--hair);
+    background:rgba(255,255,255,0.03);
+    border-radius:14px;
+    padding:10px 12px;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    margin:10px 0 12px;
+  }
+
+  .modal .summary .line{display:flex;justify-content:space-between;gap:10px;color:var(--muted);font-size:14px}
+  .modal .summary .line strong{color:var(--text);font-weight:700}
+  .modal .actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:10px}
+
+  .fineprint{margin:10px 0 0;color:var(--muted);font-size:12px;line-height:1.35}
+</style>
 </head>
 <body>
   <div class="wrap">
