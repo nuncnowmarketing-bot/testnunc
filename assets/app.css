@@ -1,1 +1,132 @@
+:root{
+  --bg:#121212;
+  --panel:#161616;
+  --panel2:#1b1b1b;
+  --text:#ffffff;
+  --muted:rgba(255,255,255,0.70);
+  --hair:rgba(255,255,255,0.12);
+  --pill:rgba(255,255,255,0.06);
+  --pillHover:rgba(255,255,255,0.10);
+  --danger:rgba(255,255,255,0.08);
+  --ok:#7CFCB2;
+  --gold:#d4af37;
+  --goldBg:rgba(212,175,55,0.15);
+  --goldHover:rgba(212,175,55,0.25);
+  --focus:rgba(212,175,55,0.55);
+}
 
+*{box-sizing:border-box}
+
+html,body{
+  margin:0;
+  min-height:100vh;
+  background:transparent;
+  color:var(--text);
+  font-family:Garamond,"EB Garamond","Cormorant Garamond","Times New Roman",serif;
+  letter-spacing:0.2px;
+  position:relative;
+}
+
+/* Always-dark viewport background */
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  background:var(--bg);
+  z-index:-1;
+}
+
+a{color:inherit;text-decoration:none}
+
+.wrap{
+  min-height:100%;
+  display:flex;
+  flex-direction:column;
+}
+
+header{
+  position:sticky;
+  top:0;
+  background:rgba(18,18,18,0.94);
+  border-bottom:1px solid var(--hair);
+  z-index:10;
+  backdrop-filter:saturate(140%) blur(8px);
+}
+
+.nav{
+  max-width:1080px;
+  margin:0 auto;
+  padding:18px 20px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+
+.brand{display:flex;align-items:baseline;gap:12px}
+
+.logo{
+  font-size:30px;
+  font-weight:600;
+  line-height:1;
+}
+
+.nav-actions{display:flex;gap:10px}
+
+.pill{
+  padding:8px 14px;
+  border:1px solid var(--hair);
+  border-radius:999px;
+  background:var(--pill);
+  font-size:14px;
+  font-family:inherit;
+  display:inline-block;
+}
+
+.pill:hover{background:var(--pillHover)}
+
+main{
+  flex:1;
+  width:100%;
+  max-width:1280px;
+  margin:0 auto;
+  padding:18px 20px 56px;
+  display:block;
+}
+
+footer{
+  border-top:1px solid var(--hair);
+  background:var(--panel);
+}
+
+.foot{
+  max-width:1080px;
+  margin:0 auto;
+  padding:20px;
+  font-size:13px;
+  color:var(--muted);
+  display:flex;
+  justify-content:space-between;
+}
+
+/* shared buttons (used by post + index modal) */
+.btn{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:10px 12px;
+  border:1px solid var(--hair);
+  background:var(--pill);
+  border-radius:999px;
+  cursor:pointer;
+  font:inherit;
+  color:var(--text);
+}
+.btn:hover{background:var(--pillHover)}
+.btn.gold{border-color:var(--gold);background:var(--goldBg);color:var(--gold);font-weight:700}
+.btn.gold:hover{background:var(--goldHover)}
+.btn.ghost{background:transparent}
+
+/* prevent white rubber-band in some previews */
+@supports (-webkit-touch-callout: none){
+  html, body{background:var(--bg);}
+}
