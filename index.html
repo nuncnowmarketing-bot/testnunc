@@ -1,3 +1,4 @@
+```html
 <!doctype html>
 <html lang="en">
 <head>
@@ -159,7 +160,6 @@
   .loading .spinner{display:inline-block}
   @keyframes spin{to{transform:rotate(360deg)}}
 
-  /* Mobile tightening */
   @media (max-width:520px){
     .post{grid-template-columns:56px 1fr 44px; padding:14px 14px}
     .feed-header{padding:16px 14px 12px}
@@ -356,7 +356,7 @@
   </div>
 
   <script>
-    // Leaderboard feed: shows locally saved posts from post.html (nunc_posts_v1), then fills with samples.
+    // Leaderboard feed: ONLY locally saved posts from post.html (nunc_posts_v1). No auto-generated samples.
 
     const FEED = document.getElementById('feed');
     const SENTINEL = document.getElementById('sentinel');
@@ -366,7 +366,7 @@
 
     // Storage keys
     const POSTS_KEY  = 'nunc_posts_v1';    // array of {id,text,country,createdAt,expiresAt,boosts}
-    const BOOSTS_KEY = 'nunc_boosts_v1';   // map { [postId]: number } (used by boost modal)
+    const BOOSTS_KEY = 'nunc_boosts_v1';   // map { [postId]: number }
 
     const ONE_DAY_MS = 86400000;
     const now = () => Date.now();
@@ -453,10 +453,6 @@
       payBackdrop.style.display='none';
       payBackdrop.setAttribute('aria-hidden','true');
       pendingBoostPostId = '';
-      pendingBoostIsSample = false;
-      pendingBoostText = '';
-      pendingBoostCountry = '';
-      pendingBoostCreatedAt = 0;
     };
 
     cancelPay.addEventListener('click', closePay);
@@ -508,10 +504,6 @@
     }
 
     let pendingBoostPostId = '';
-    let pendingBoostIsSample = false;
-    let pendingBoostText = '';
-    let pendingBoostCountry = '';
-    let pendingBoostCreatedAt = 0;
 
     async function finalizeBoost(){
       const amt = parseAmount(payAmount.value);
@@ -529,25 +521,15 @@
       map[pendingBoostPostId] = next;
       saveBoosts(map);
 
-      // Sync into posts list. If user boosted a sample post, promote it into POSTS_KEY so it doesn't disappear.
+      // Sync into posts list (real posts only)
       const posts = prunePosts(loadPosts());
       const idx = posts.findIndex(p => p && p.id === pendingBoostPostId);
-
       if(idx >= 0){
         posts[idx].boosts = next;
         savePosts(posts);
-      } else if(pendingBoostIsSample && pendingBoostText){
-        const createdAt = pendingBoostCreatedAt || now();
-        const p = {
-          id: pendingBoostPostId,
-          text: String(pendingBoostText).slice(0,200),
-          country: pendingBoostCountry || rand(sampleCountries),
-          createdAt,
-          expiresAt: createdAt + ONE_DAY_MS,
-          boosts: next
-        };
-        posts.unshift(p);
-        savePosts(posts);
+      } else {
+        closePay();
+        return toastMsg('Boost failed: post not found.');
       }
 
       closePay();
@@ -558,47 +540,6 @@
     confirmPay.addEventListener('click', finalizeBoost);
 
     // ---------- Rendering ----------
-    const sampleCountries = [
-      'Japan','Germany','Brazil','Canada','South Africa','Ireland','France','Spain','Italy','Netherlands',
-      'Sweden','Norway','Denmark','Finland','Poland','Czechia','Portugal','Greece','Turkey','Egypt',
-      'Nigeria','Kenya','Morocco','India','Pakistan','Bangladesh','Thailand','Vietnam','Indonesia','Philippines',
-      'Australia','New Zealand','Mexico','Argentina','Chile','Colombia','Peru','United States','United Kingdom','Switzerland',
-      'Austria','Belgium','Hungary','Romania','Bulgaria','Ukraine','Israel','UAE','Saudi Arabia','Singapore'
-    ];
-
-    const prompts = [
-      'Conviction beats correctness when incentives are misaligned.',
-      'If a platform hides the price, it is selling you to someone else.',
-      'Attention is a budget. Most people spend it like it is infinite.',
-      'Transparency hurts because it removes narratives.',
-      'Markets pay for confidence, then punish for being wrong.',
-      'If you cannot explain it simply, you are outsourcing thinking.',
-      'Most "debates" are status games disguised as logic.',
-      'The algorithm is not neutral. It is a business model.',
-      'Outrage is a distribution strategy.',
-      'The easiest way to win is to choose games with honest scoring.',
-      'Clarity is expensive. Vagueness is subsidised.',
-      'Every system optimises for what it measures, not what it claims to value.',
-      'Most people confuse confidence with competence.',
-      'Visibility without accountability produces noise.',
-      'Incentives explain behaviour better than morality.'
-    ];
-
-    const timeLabels = ['just now','1m','3m','6m','10m','18m','25m','40m','1h','2h','4h','7h','12h','18h','23h'];
-
-    function rand(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
-
-    function randomText(maxChars){
-      let out = '';
-      while(out.length < maxChars){
-        const next = rand(prompts);
-        if(out.length + next.length + 1 > maxChars) break;
-        out += (out ? ' ' : '') + next;
-      }
-      if(out.length === 0) out = rand(prompts);
-      return out;
-    }
-
     function fmtTimeAgo(ts){
       const diff = Math.max(0, now() - ts);
       const mins = Math.floor(diff / 60000);
@@ -609,14 +550,10 @@
       return '1d';
     }
 
-    function makeRow({ rank, id, text, country, timeLabel, boosts, isSample, createdAt }){
+    function makeRow({ rank, id, text, country, timeLabel, boosts, createdAt }){
       const row = document.createElement('div');
       row.className = 'post';
       row.dataset.postId = id;
-      row.dataset.sample = isSample ? '1' : '0';
-      row.dataset.text = text;
-      row.dataset.country = country;
-      row.dataset.createdAt = String(createdAt || 0);
 
       const rankEl = document.createElement('div');
       rankEl.className = 'rank';
@@ -645,10 +582,6 @@
       boostBtn.textContent = '▲';
       boostBtn.addEventListener('click', ()=>{
         pendingBoostPostId = id;
-        pendingBoostIsSample = !!isSample;
-        pendingBoostText = text;
-        pendingBoostCountry = country;
-        pendingBoostCreatedAt = Number(createdAt || 0);
         openPay();
       });
 
@@ -664,7 +597,8 @@
       else STATUS.classList.remove('loading');
     }
 
-    let sampleRankStart = 1;
+    let allPosts = [];
+    let cursor = 0;
     let loaded = 0;
     const BATCH = 12;
 
@@ -672,18 +606,7 @@
       STATUS_TEXT.textContent = `Loaded ${loaded} posts`;
     }
 
-    function renderFresh(){
-      // Clear and rebuild from saved posts
-      FEED.innerHTML = '';
-      loaded = 0;
-
-      let posts = prunePosts(loadPosts());
-      posts = mergeBoostsIntoPosts(posts);
-
-      // TRUE LEADERBOARD ORDER:
-      // 1) boosts DESC
-      // 2) createdAt DESC
-      // 3) id ASC (stable tie‑break)
+    function sortLeaderboard(posts){
       posts.sort((a,b)=>{
         const ba = Number(a?.boosts || 0), bb = Number(b?.boosts || 0);
         if(bb !== ba) return bb - ba;
@@ -691,73 +614,94 @@
         if(tb !== ta) return tb - ta;
         return String(a?.id||'').localeCompare(String(b?.id||''));
       });
-
-      const frag = document.createDocumentFragment();
-      let rank = 1;
-      for(const p of posts){
-        if(!p || !p.id || !p.text) continue;
-        frag.appendChild(makeRow({
-          rank,
-          id: p.id,
-          text: String(p.text).slice(0,200),
-          country: p.country || rand(sampleCountries),
-          timeLabel: p.createdAt ? fmtTimeAgo(p.createdAt) : rand(timeLabels),
-          boosts: Number(p.boosts || 0),
-          isSample: false,
-          createdAt: Number(p.createdAt || 0)
-        }));
-        rank++;
-        loaded++;
-      }
-      FEED.appendChild(frag);
-
-      // Next ranks for samples start AFTER real posts
-      sampleRankStart = rank;
-      updateStatus();
+      return posts;
     }
 
-    function appendSampleBatch(){
+    function rebuildDataset(){
+      let posts = prunePosts(loadPosts());
+      posts = mergeBoostsIntoPosts(posts);
+      allPosts = sortLeaderboard(posts.filter(p => p && p.id && p.text));
+      cursor = 0;
+    }
+
+    function renderEmptyState(){
+      FEED.innerHTML = '';
+      loaded = 0;
+      updateStatus();
+      const row = document.createElement('div');
+      row.className = 'post';
+      row.innerHTML = `
+        <div class="rank">—</div>
+        <div class="content">
+          <div class="title">No posts yet</div>
+          <div class="meta">Create a post on the post page.</div>
+        </div>
+        <div></div>
+      `;
+      FEED.appendChild(row);
+    }
+
+    function appendRealBatch(){
+      if(cursor >= allPosts.length) return;
       setLoading(true);
+
       window.setTimeout(() => {
         const frag = document.createDocumentFragment();
-        for(let i=0;i<BATCH;i++){
-          const maxLen = Math.floor(Math.random() * 200) + 1;
-          const text = randomText(maxLen).slice(0, maxLen);
-          const id = 'sample_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
-          const ctry = rand(sampleCountries);
-          const createdAt = now();
+        const startRank = cursor + 1;
+
+        for(let i=0;i<BATCH && cursor < allPosts.length;i++, cursor++){
+          const p = allPosts[cursor];
           frag.appendChild(makeRow({
-            rank: sampleRankStart,
-            id,
-            text,
-            country: ctry,
-            timeLabel: rand(timeLabels),
-            boosts: 0,
-            isSample: true,
-            createdAt
+            rank: startRank + i,
+            id: p.id,
+            text: String(p.text).slice(0,200),
+            country: p.country || '—',
+            timeLabel: p.createdAt ? fmtTimeAgo(p.createdAt) : '—',
+            boosts: Number(p.boosts || 0),
+            createdAt: Number(p.createdAt || 0)
           }));
-          sampleRankStart++;
           loaded++;
         }
+
         FEED.appendChild(frag);
         updateStatus();
         setLoading(false);
-      }, 220);
+      }, 180);
     }
 
-    // Initial render + seed samples to avoid empty feed
+    function renderFresh(){
+      FEED.innerHTML = '';
+      loaded = 0;
+      rebuildDataset();
+
+      if(allPosts.length === 0){
+        renderEmptyState();
+        return;
+      }
+
+      appendRealBatch();
+    }
+
     renderFresh();
-    appendSampleBatch();
 
     const io = new IntersectionObserver((entries) => {
       for(const e of entries){
         if(e.isIntersecting){
-          appendSampleBatch();
+          appendRealBatch();
         }
       }
     }, { root:null, rootMargin:'600px 0px', threshold:0 });
 
     io.observe(SENTINEL);
+
+    // Keep leaderboard live across tabs and same tab changes.
+    // If assets/app.js already broadcasts, this still works.
+    window.addEventListener('storage', (e)=>{
+      if(e.key === POSTS_KEY || e.key === BOOSTS_KEY){
+        renderFresh();
+      }
+    });
   </script>
 </body>
 </html>
+```
