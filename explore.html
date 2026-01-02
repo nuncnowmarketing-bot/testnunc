@@ -87,7 +87,6 @@
       padding:14px 18px;
       border-bottom:1px solid var(--hair);
       align-items:center;
-      cursor:pointer;
     }
 
     .row:last-child{border-bottom:none}
@@ -108,16 +107,6 @@
       flex-wrap:wrap;
       align-items:center;
       margin-top:6px;
-    }
-
-    .dot{
-      width:3px;
-      height:3px;
-      border-radius:999px;
-      background:var(--muted);
-      opacity:0.6;
-      display:inline-block;
-      transform:translateY(-1px);
     }
 
     .go{
@@ -243,17 +232,17 @@
       const go = document.createElement('button');
       go.className = 'go';
       go.type = 'button';
-      go.textContent = 'open';
+      go.textContent = 'view';
       go.addEventListener('click', (e) => {
         e.stopPropagation();
-        location.href = `map.html?country=${encodeURIComponent(c)}`;
+        location.href = `index.html?country=${encodeURIComponent(c)}`;
       });
 
       row.appendChild(left);
       row.appendChild(go);
 
       row.addEventListener('click', () => {
-        location.href = `map.html?country=${encodeURIComponent(c)}`;
+        location.href = `index.html?country=${encodeURIComponent(c)}`;
       });
 
       frag.appendChild(row);
