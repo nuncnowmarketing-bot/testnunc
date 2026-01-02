@@ -289,9 +289,21 @@
     return { posts, boosts };
   };
 
+  // UPDATED: seeds/merges paid boosts into BOOSTS_KEY at post creation time.
   const addOrUpdatePost = (post) => {
     const cp = canonicalizePost(post);
     if (!cp) return null;
+
+    // Seed/merge boosts into canonical boosts map so paid boosts persist.
+    const map = loadBoosts();
+    const existing = Number(map[cp.id] ?? 0);
+    const incoming = Math.max(0, Math.floor(Number(cp.boosts || 0)));
+    const seeded = Math.max(existing, incoming);
+    if (seeded !== existing) {
+      map[cp.id] = seeded;
+      saveBoosts(map);
+    }
+    cp.boosts = seeded;
 
     let posts = prunePosts(loadPosts());
     const idx = posts.findIndex(p => p && p.id === cp.id);
@@ -304,13 +316,24 @@
     return cp;
   };
 
+  // UPDATED: if boost map has no entry yet, fall back to stored post.boosts (paid boosts).
   const addBoosts = (postId, add) => {
     const id = String(postId || '').trim();
     const inc = Math.max(0, Math.floor(Number(add || 0)));
     if (!id || inc < 1) return { ok: false, boosts: 0 };
 
     const map = loadBoosts();
-    const prev = Number(map[id] || 0);
+
+    let prev = Number(map[id] ?? 0);
+
+    // If boosts map doesn't yet have this post, fall back to stored post.boosts (paid boosts).
+    if (!(id in map)) {
+      const posts0 = prunePosts(loadPosts());
+      const p = posts0.find(x => x && x.id === id);
+      const pb = Number(p?.boosts ?? 0);
+      if (Number.isFinite(pb) && pb > prev) prev = pb;
+    }
+
     const next = prev + inc;
     map[id] = next;
     saveBoosts(map);
