@@ -67,7 +67,6 @@
       font:inherit;
       cursor:pointer;
     }
-
     .btn-sm:hover{background:var(--pill);}
 
     .grid{
@@ -94,7 +93,7 @@
       overflow:hidden;
       display:flex;
       flex-direction:column;
-      min-height:120px;
+      min-height:96px;
     }
 
     .card-top{
@@ -106,9 +105,26 @@
       align-items:center;
     }
 
+    .left{
+      display:flex;
+      align-items:baseline;
+      gap:10px;
+      min-width:0;
+    }
+
+    .rank{
+      font-variant-numeric: tabular-nums;
+      color:var(--muted);
+      font-size:13px;
+      white-space:nowrap;
+    }
+
     .country{
       font-weight:700;
       letter-spacing:0.2px;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
     }
 
     .score{
@@ -119,74 +135,22 @@
       font-size:13px;
       white-space:nowrap;
     }
-
     .score strong{color:var(--text);}
 
     .card-body{
-      padding:12px;
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-    }
-
-    .bar{
-      height:10px;
-      border-radius:999px;
-      border:1px solid var(--hair);
-      background:rgba(255,255,255,0.03);
-      overflow:hidden;
-    }
-
-    .bar > div{
-      height:100%;
-      width:0%;
-      background:var(--goldBg);
-    }
-
-    .mini{
-      font-size:12px;
-      color:var(--muted);
+      padding:10px 12px 12px;
       display:flex;
       justify-content:space-between;
-      gap:10px;
-      flex-wrap:wrap;
-    }
-
-    .toast{
-      position:fixed;
-      left:50%;
-      bottom:18px;
-      transform:translateX(-50%);
-      background:rgba(0,0,0,0.82);
-      border:1px solid var(--hair);
-      padding:10px 12px;
-      border-radius:12px;
-      display:none;
-      z-index:60;
-    }
-
-    .statusline{
-      padding:12px 18px;
-      border-top:1px solid var(--hair);
-      color:var(--muted);
-      font-size:13px;
-      display:flex;
-      gap:10px;
       align-items:center;
-      justify-content:space-between;
+      gap:10px;
+      color:var(--muted);
+      font-size:12px;
     }
 
-    .spinner{
-      width:14px;
-      height:14px;
-      border-radius:999px;
-      border:2px solid var(--hair);
-      border-top-color:rgba(255,255,255,0.55);
-      animation:spin 0.8s linear infinite;
-      display:none;
-    }
-    .loading .spinner{display:inline-block}
-    @keyframes spin{to{transform:rotate(360deg)}}
+    .muted{color:var(--muted);}
+
+    /* remove the old bar/status UI entirely (kept no-op classes in case app.css references) */
+    .bar, .statusline, .spinner, .toast{display:none !important;}
   </style>
   <script src="./assets/app.js"></script>
 </head>
@@ -221,14 +185,6 @@
         </div>
 
         <div id="grid" class="grid"></div>
-
-        <div class="statusline" id="statusLine">
-          <div style="display:flex;align-items:center;gap:10px;">
-            <span class="spinner" aria-hidden="true"></span>
-            <span id="statusText">Loaded</span>
-          </div>
-          <span id="statusMeta">—</span>
-        </div>
       </section>
     </main>
 
@@ -239,8 +195,6 @@
       </div>
     </footer>
   </div>
-
-  <div class="toast" id="toast"></div>
 
   <script>
   (() => {
@@ -255,65 +209,61 @@
     const GRID = document.getElementById('grid');
     const CLEAR = document.getElementById('clearBtn');
     const RANDOM = document.getElementById('randomBtn');
-    const TOAST = document.getElementById('toast');
-    const STATUSLINE = document.getElementById('statusLine');
-    const STATUS_TEXT = document.getElementById('statusText');
-    const STATUS_META = document.getElementById('statusMeta');
-
-    const toastMsg = (m) => {
-      TOAST.textContent = m;
-      TOAST.style.display = 'block';
-      setTimeout(() => TOAST.style.display = 'none', 1600);
-    };
-
-    const setLoading = (on) => {
-      if (on) STATUSLINE.classList.add('loading');
-      else STATUSLINE.classList.remove('loading');
-    };
 
     const norm = (s) => String(s || '').trim().toLowerCase();
-    const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
 
     let lastLedgerPosts = [];
-    let lastTotals = null;
-    let lastSortedCountries = [];
+    let lastTotals = null;            // { country: boosts }
+    let lastSortedCountries = [];     // [country,...] sorted DESC by boosts
 
-    function card(country, total, maxTotal){
+    function postsCountFor(country){
+      // cheap O(n) is fine for demo; can precompute if needed
+      let n = 0;
+      for (const p of lastLedgerPosts) if (String(p.country || '').trim() === country) n++;
+      return n;
+    }
+
+    function card(rank, country, total){
       const el = document.createElement('div');
       el.className = 'card';
 
       const top = document.createElement('div');
       top.className = 'card-top';
 
+      const left = document.createElement('div');
+      left.className = 'left';
+
+      const r = document.createElement('div');
+      r.className = 'rank';
+      r.textContent = `#${rank}`;
+
       const c = document.createElement('div');
       c.className = 'country';
       c.textContent = country;
+
+      left.appendChild(r);
+      left.appendChild(c);
 
       const s = document.createElement('div');
       s.className = 'score';
       s.innerHTML = `<span>boosts</span> <strong>${Number(total || 0)}</strong>`;
 
-      top.appendChild(c);
+      top.appendChild(left);
       top.appendChild(s);
 
       const body = document.createElement('div');
       body.className = 'card-body';
 
-      const bar = document.createElement('div');
-      bar.className = 'bar';
-      const fill = document.createElement('div');
-      const pct = maxTotal > 0 ? clamp((Number(total || 0) / maxTotal) * 100, 0, 100) : 0;
-      fill.style.width = pct.toFixed(1) + '%';
-      bar.appendChild(fill);
+      const pc = document.createElement('div');
+      pc.className = 'muted';
+      pc.textContent = `${postsCountFor(country)} posts`;
 
-      const mini = document.createElement('div');
-      mini.className = 'mini';
+      const hint = document.createElement('div');
+      hint.className = 'muted';
+      hint.textContent = 'ranked';
 
-      const postsCount = lastLedgerPosts.filter(p => String(p.country || '').trim() === country).length;
-      mini.innerHTML = `<span>${postsCount} posts</span><span>${pct.toFixed(1)}%</span>`;
-
-      body.appendChild(bar);
-      body.appendChild(mini);
+      body.appendChild(pc);
+      body.appendChild(hint);
 
       el.appendChild(top);
       el.appendChild(body);
@@ -332,53 +282,47 @@
       if (!list.length) {
         const empty = document.createElement('div');
         empty.className = 'card';
-        empty.innerHTML = `
-          <div class="card-top"><div class="country">No results</div><div class="score"><span>—</span></div></div>
-          <div class="card-body"><div class="mini">Try a different search.</div></div>
-        `;
+        empty.innerHTML =
+          `<div class="card-top">
+             <div class="left"><div class="rank">—</div><div class="country">No results</div></div>
+             <div class="score"><span>—</span></div>
+           </div>
+           <div class="card-body"><div class="muted">Try a different search.</div><div></div></div>`;
         GRID.appendChild(empty);
-        STATUS_META.textContent = '0 countries';
         return;
       }
 
       const totals = lastTotals || window.NUNC.totalsByCountry(lastLedgerPosts);
-      const maxTotal = Math.max(0, ...Object.values(totals).map(v => Number(v || 0)));
 
       const frag = document.createDocumentFragment();
-      for (const c of list) {
-        frag.appendChild(card(c, totals[c] || 0, maxTotal));
+      for (let i = 0; i < list.length; i++){
+        const country = list[i];
+        frag.appendChild(card(i + 1, country, totals[country] || 0));
       }
       GRID.appendChild(frag);
-
-      STATUS_META.textContent = `${list.length} countries`;
     }
 
-    async function refresh(authoritative){
-      setLoading(true);
+    async function refresh(){
       try{
-        // Fast paint from cache if desired
-        if (!authoritative) {
-          try{
-            const cached = await window.NUNC.getLedger({ preferCache: true });
-            lastLedgerPosts = cached.posts || [];
-            lastTotals = window.NUNC.totalsByCountry(lastLedgerPosts);
-            lastSortedCountries = window.NUNC.sortCountriesByTotals(lastTotals);
-            render(Q.value);
-          }catch(_){}
-        }
-
-        // Authoritative API fetch
         const ledger = await window.NUNC.getLedger();
         lastLedgerPosts = ledger.posts || [];
+
         lastTotals = window.NUNC.totalsByCountry(lastLedgerPosts);
         lastSortedCountries = window.NUNC.sortCountriesByTotals(lastTotals);
 
-        STATUS_TEXT.textContent = `Loaded ${lastLedgerPosts.length} posts`;
+        // If your sorter ever returns alphabetical (bug), harden it:
+        // stable tie-break on name, but primary is boosts desc.
+        lastSortedCountries.sort((a,b) => {
+          const ta = Number(lastTotals[a] || 0);
+          const tb = Number(lastTotals[b] || 0);
+          if (tb !== ta) return tb - ta;
+          return String(a).localeCompare(String(b));
+        });
+
         render(Q.value);
-      }catch(_){
-        toastMsg('Load failed (API unreachable).');
-      }finally{
-        setLoading(false);
+      }catch(e){
+        // keep whatever is currently on screen; fail silently for demo stability
+        console.warn('Explore refresh failed', e);
       }
     }
 
@@ -391,16 +335,15 @@
       render(Q.value);
     });
 
-    // Initial: cache -> API
-    refresh(false);
+    // Initial load
+    refresh();
 
-    // Debounced refresh on ledger events
+    // Live updates
     let t = null;
     const scheduleRefresh = () => {
       clearTimeout(t);
-      t = setTimeout(() => refresh(true), 180);
+      t = setTimeout(() => refresh(), 180);
     };
-
     window.NUNC.watchLedger(() => scheduleRefresh(), { pollMs: 1100 });
   })();
   </script>
