@@ -1,52 +1,49 @@
 /* assets/app.js
-   nunc shared runtime: ledger, sync, formatting, country list, safe storage helpers.
-   Exposes window.NUNC (no build step, no modules).
+   nunc shared runtime (no build step, no modules).
+   Exposes window.NUNC.
 
-   Single source of truth:
-   - Posts live in POSTS_KEY (array of canonical posts)
-   - Boost totals live in BOOSTS_KEY (map postId -> boosts)
-   - Pages NEVER define keys/countries/pruning/totals/sorting/sync/polling
+   Backend-first single source of truth:
+   - API is authoritative for posts + boosts across devices.
+   - localStorage is cache only (fast paint / offline-ish), never authority.
+
+   Minimum endpoints assumed:
+   - GET    /api/posts
+   - POST   /api/posts
+   - POST   /api/posts/:id/boost
+   - DELETE /api/posts/:id
 */
 (() => {
   'use strict';
 
   const ONE_DAY_MS = 86400000;
 
-  // Canonical keys
-  const POSTS_KEY = 'nunc_posts_v1';    // array of posts
-  const BOOSTS_KEY = 'nunc_boosts_v1';  // map { [postId]: number }
+  // ---- API base (hardcoded for now) ----
+  const API_BASE = 'https://testnunc.onrender.com';
 
-  // Legacy keys (read + merge + migrate once)
+  // ---- Cache keys (NOT authority) ----
+  const CACHE_POSTS_KEY = 'nunc_cache_posts_v1';
+
+  // Legacy keys (read once -> cache; then delete to stop divergence)
   const LEGACY_POST_KEYS = [
-    POSTS_KEY,
+    'nunc_posts_v1',
     'nunc_posts',
     'nunc_leaderboard_posts',
     'nunc_leaderboard_v1'
+  ];
+  const LEGACY_BOOSTS_KEYS = [
+    'nunc_boosts_v1'
   ];
 
   // Cross-tab channel (same origin)
   const BC = ('BroadcastChannel' in window) ? new BroadcastChannel('nunc_ledger') : null;
 
   const now = () => Date.now();
-
-  const safeJsonParse = (s, fallback) => {
-    try { return JSON.parse(s); } catch (_) { return fallback; }
-  };
-
-  const safeGet = (k, fallback) => {
-    try { return localStorage.getItem(k) ?? fallback; } catch (_) { return fallback; }
-  };
-
-  const safeSet = (k, v) => {
-    try { localStorage.setItem(k, v); return true; } catch (_) { return false; }
-  };
-
-  const safeRemove = (k) => {
-    try { localStorage.removeItem(k); return true; } catch (_) { return false; }
-  };
+  const safeJsonParse = (s, fallback) => { try { return JSON.parse(s); } catch { return fallback; } };
+  const safeGet = (k, fallback) => { try { return localStorage.getItem(k) ?? fallback; } catch { return fallback; } };
+  const safeSet = (k, v) => { try { localStorage.setItem(k, v); return true; } catch { return false; } };
+  const safeRemove = (k) => { try { localStorage.removeItem(k); return true; } catch { return false; } };
 
   // ---- Countries (UN members + Kosovo + Palestine; no other dependencies/non-recognised states) ----
-  // Keep ordering stable (alphabetical).
   const COUNTRIES = [
     'Afghanistan','Albania','Algeria','Andorra','Angola','Antigua and Barbuda','Argentina','Armenia','Australia','Austria','Azerbaijan',
     'Bahamas','Bahrain','Bangladesh','Barbados','Belarus','Belgium','Belize','Benin','Bhutan','Bolivia','Bosnia and Herzegovina','Botswana','Brazil','Brunei','Bulgaria','Burkina Faso','Burundi',
@@ -75,8 +72,10 @@
 
   const rand = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
-  // ---- Post schema ----
-  // Canonical post:
+  // ---- URL rule (block obvious links) ----
+  const hasUrl = (s) => /(https?:\/\/|www\.|\.[a-z]{2,})(\/|$)/i.test(String(s || ''));
+
+  // ---- Canonical post schema ----
   // { id, text, country, createdAt, expiresAt, boosts }
   const canonicalizePost = (p) => {
     if (!p || typeof p !== 'object') return null;
@@ -89,29 +88,33 @@
 
     const createdAt = Number(p.createdAt ?? p.created_at ?? 0) || 0;
 
-    // Prefer explicit expiresAt; else createdAt + 24h if createdAt exists.
     const expiresAtRaw = Number(p.expiresAt ?? p.expires_at ?? 0) || 0;
     const expiresAt = expiresAtRaw || (createdAt ? (createdAt + ONE_DAY_MS) : 0);
 
     const country = String(p.country || p.location || '').trim() || '';
 
-    // Try canonical boosts first; then common aliases; finally 0.
-    const boosts = (Number.isFinite(p.boosts) ? Number(p.boosts) : NaN);
-    const alt =
+    const boosts = Number.isFinite(p.boosts) ? Number(p.boosts) : (
       Number.isFinite(p.score) ? Number(p.score) :
       Number.isFinite(p.points) ? Number(p.points) :
       Number.isFinite(p.boost) ? Number(p.boost) :
       Number.isFinite(p.boostCount) ? Number(p.boostCount) :
-      0;
+      0
+    );
 
-    return {
-      id,
-      text,
-      country,
-      createdAt,
-      expiresAt,
-      boosts: Number.isFinite(boosts) ? boosts : alt
-    };
+    return { id, text, country, createdAt, expiresAt, boosts: Math.max(0, Math.floor(boosts || 0)) };
+  };
+
+  const dedupeById = (posts) => {
+    const seen = new Set();
+    const out = [];
+    for (const p of (Array.isArray(posts) ? posts : [])) {
+      const cp = canonicalizePost(p);
+      if (!cp) continue;
+      if (seen.has(cp.id)) continue;
+      seen.add(cp.id);
+      out.push(cp);
+    }
+    return out;
   };
 
   const isAlive = (p, tNow) => {
@@ -123,75 +126,9 @@
     return true;
   };
 
-  // ---- Ledger IO ----
-  const loadBoosts = () => {
-    const raw = safeGet(BOOSTS_KEY, '{}');
-    const m = safeJsonParse(raw, {});
-    return (m && typeof m === 'object') ? m : {};
-  };
-
-  const saveBoosts = (map) => {
-    const m = (map && typeof map === 'object') ? map : {};
-    safeSet(BOOSTS_KEY, JSON.stringify(m));
-  };
-
-  const loadPostsFromKey = (k) => {
-    const raw = safeGet(k, '[]');
-    const arr = safeJsonParse(raw, []);
-    return Array.isArray(arr) ? arr : [];
-  };
-
-  const dedupeById = (posts) => {
-    const seen = new Set();
-    const out = [];
-    for (const p of posts) {
-      const cp = canonicalizePost(p);
-      if (!cp) continue;
-      if (seen.has(cp.id)) continue;
-      seen.add(cp.id);
-      out.push(cp);
-    }
-    return out;
-  };
-
-  const loadPosts = () => {
-    // Read from all legacy keys, merge, dedupe.
-    const merged = [];
-    for (const k of LEGACY_POST_KEYS) merged.push(...loadPostsFromKey(k));
-    return dedupeById(merged);
-  };
-
-  const savePosts = (posts) => {
-    const arr = Array.isArray(posts) ? posts : [];
-    const canon = dedupeById(arr);
-
-    // Write canonical key only.
-    safeSet(POSTS_KEY, JSON.stringify(canon));
-
-    // Clean old keys to avoid divergence.
-    for (const k of LEGACY_POST_KEYS) {
-      if (k !== POSTS_KEY) safeRemove(k);
-    }
-  };
-
   const prunePosts = (posts) => {
     const t = now();
     return (Array.isArray(posts) ? posts : []).filter(p => isAlive(p, t));
-  };
-
-  const syncBoostsIntoPosts = (posts, boostsMap) => {
-    const map = boostsMap || loadBoosts();
-    let changed = false;
-    const out = (Array.isArray(posts) ? posts : []).map(p => {
-      if (!p || !p.id) return p;
-      const b = Number(map[p.id] ?? p.boosts ?? 0);
-      if (Number(p.boosts || 0) !== b) {
-        changed = true;
-        return { ...p, boosts: b };
-      }
-      return p;
-    });
-    return { posts: out, changed };
   };
 
   const sortLeaderboardPosts = (posts) => {
@@ -206,44 +143,82 @@
     return arr;
   };
 
+  // ---- Cache IO (not authority) ----
+  const loadCachedPosts = () => {
+    const raw = safeGet(CACHE_POSTS_KEY, '[]');
+    const arr = safeJsonParse(raw, []);
+    return prunePosts(dedupeById(Array.isArray(arr) ? arr : []));
+  };
+
+  const saveCachedPosts = (posts) => {
+    const canon = prunePosts(dedupeById(posts));
+    safeSet(CACHE_POSTS_KEY, JSON.stringify(canon));
+  };
+
+  const migrateLegacyToCacheOnce = () => {
+    // Merge legacy posts into cache (best-effort), then delete legacy keys.
+    let merged = loadCachedPosts();
+
+    for (const k of LEGACY_POST_KEYS) {
+      const raw = safeGet(k, null);
+      if (raw == null) continue;
+      const arr = safeJsonParse(raw, []);
+      if (Array.isArray(arr) && arr.length) merged = merged.concat(arr);
+    }
+
+    // Merge legacy boosts into posts boosts (only if posts exist and boosts missing/0).
+    // This does NOT persist as separate boosts map anymore; API is authority.
+    for (const bk of LEGACY_BOOSTS_KEYS) {
+      const raw = safeGet(bk, null);
+      if (raw == null) continue;
+      const m = safeJsonParse(raw, {});
+      if (!m || typeof m !== 'object') continue;
+      merged = merged.map(p => {
+        const cp = canonicalizePost(p);
+        if (!cp) return p;
+        const b = Math.max(0, Math.floor(Number(m[cp.id] ?? 0)));
+        if (b > (cp.boosts || 0)) return { ...cp, boosts: b };
+        return cp;
+      });
+    }
+
+    merged = sortLeaderboardPosts(prunePosts(dedupeById(merged)));
+    if (merged.length) saveCachedPosts(merged);
+
+    // Delete legacy keys to stop divergence
+    for (const k of LEGACY_POST_KEYS) safeRemove(k);
+    for (const k of LEGACY_BOOSTS_KEYS) safeRemove(k);
+  };
+
   // ---- Events / Sync ----
   const signalLedgerUpdate = (payload) => {
-    // Cross-tab
-    try {
-      if (BC) BC.postMessage({ type: 'ledger_update', t: now(), ...(payload || {}) });
-    } catch (_) {}
-
-    // Same-tab
-    try {
-      window.dispatchEvent(new CustomEvent('nunc:ledger_update', { detail: payload || {} }));
-    } catch (_) {}
+    try { if (BC) BC.postMessage({ type: 'ledger_update', t: now(), ...(payload || {}) }); } catch {}
+    try { window.dispatchEvent(new CustomEvent('nunc:ledger_update', { detail: payload || {} })); } catch {}
   };
 
   const watchLedger = (cb, opts) => {
     const fn = (typeof cb === 'function') ? cb : (() => {});
     const options = opts || {};
-    const pollMs = Math.max(300, Number(options.pollMs || 900));
+    const pollMs = Math.max(300, Number(options.pollMs || 1200));
 
-    // 1) BroadcastChannel
     if (BC) {
       BC.addEventListener('message', (ev) => {
         if (ev && ev.data && ev.data.type === 'ledger_update') fn(ev.data);
       });
     }
 
-    // 2) storage events (other tabs)
+    // cache changes (same device, other tabs)
     window.addEventListener('storage', (e) => {
       if (!e) return;
-      if (e.key === POSTS_KEY || e.key === BOOSTS_KEY) fn({ type: 'storage', key: e.key });
+      if (e.key === CACHE_POSTS_KEY) fn({ type: 'storage', key: e.key });
     });
 
-    // 3) same-tab custom event
     window.addEventListener('nunc:ledger_update', (e) => fn({ type: 'local', detail: e?.detail }));
 
-    // 4) poll fallback (embed/preview environments)
+    // Poll (helps embedded previews / environments that swallow events)
     let lastSig = '';
     const poll = () => {
-      const sig = safeGet(POSTS_KEY, '') + '|' + safeGet(BOOSTS_KEY, '');
+      const sig = safeGet(CACHE_POSTS_KEY, '');
       if (sig !== lastSig) {
         lastSig = sig;
         fn({ type: 'poll' });
@@ -251,7 +226,6 @@
     };
     poll();
     const id = setInterval(poll, pollMs);
-
     return () => clearInterval(id);
   };
 
@@ -272,7 +246,6 @@
     const t = Number(ts || 0);
     if (!t) return '—';
     const d = new Date(t);
-    // 24h clock, with date.
     return d.toLocaleString(undefined, {
       hour: '2-digit',
       minute: '2-digit',
@@ -283,85 +256,126 @@
     });
   };
 
-  // ---- URL rule (block obvious links) ----
-  const hasUrl = (s) => /(https?:\/\/|www\.|\.[a-z]{2,})(\/|$)/i.test(String(s || ''));
+  // ---- API helpers ----
+  const apiJson = async (path, opts) => {
+    const options = opts || {};
+    const res = await fetch(API_BASE + path, {
+      method: options.method || 'GET',
+      headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+      body: options.body,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const err = new Error('HTTP ' + res.status);
+      err.status = res.status;
+      err.data = data;
+      throw err;
+    }
+    return data;
+  };
 
-  // ---- High-level operations used by pages ----
-  const getLedger = () => {
-    const boosts = loadBoosts();
-    let posts = prunePosts(loadPosts());
-    const synced = syncBoostsIntoPosts(posts, boosts);
-    posts = synced.posts;
-    if (synced.changed) savePosts(posts);
+  // ---- Backend-first operations used by pages ----
+  // getLedger(): returns { posts, boosts } where boosts is derived from posts (API already includes boosts).
+  const getLedger = async (opts) => {
+    const options = opts || {};
+    const preferCache = !!options.preferCache;
+
+    // Fast path: return cache immediately if requested (page can then refresh)
+    if (preferCache) {
+      const cached = sortLeaderboardPosts(loadCachedPosts());
+      const boosts = Object.create(null);
+      for (const p of cached) boosts[p.id] = Number(p.boosts || 0);
+      return { posts: cached, boosts };
+    }
+
+    // Authoritative: fetch from API
+    const data = await apiJson('/api/posts', { method: 'GET' });
+    const posts = sortLeaderboardPosts(prunePosts(dedupeById(Array.isArray(data.posts) ? data.posts : [])));
+    saveCachedPosts(posts);
+    signalLedgerUpdate({ op: 'ledger_refresh', n: posts.length });
+
+    const boosts = Object.create(null);
+    for (const p of posts) boosts[p.id] = Number(p.boosts || 0);
+
     return { posts, boosts };
   };
 
-  // Upsert post; seed/merge paid boosts into BOOSTS_KEY so they persist.
-  const addOrUpdatePost = (post) => {
+  // create post (seeds initial paid boosts server-side)
+  const addOrUpdatePost = async (post) => {
+    // This function is now "createPost" semantics. Updates are not supported by your minimum API.
     const cp = canonicalizePost(post);
     if (!cp) return null;
 
-    // Seed/merge boosts into canonical boosts map so paid boosts persist.
-    const map = loadBoosts();
-    const existing = Number(map[cp.id] ?? 0);
-    const incoming = Math.max(0, Math.floor(Number(cp.boosts || 0)));
-    const seeded = Math.max(existing, incoming);
-    if (seeded !== existing) {
-      map[cp.id] = seeded;
-      saveBoosts(map);
-    }
-    cp.boosts = seeded;
+    // client-side rules
+    if (hasUrl(cp.text)) return null;
 
-    let posts = prunePosts(loadPosts());
-    const idx = posts.findIndex(p => p && p.id === cp.id);
-    if (idx >= 0) posts[idx] = { ...posts[idx], ...cp };
-    else posts.unshift(cp);
+    const payload = {
+      text: cp.text,
+      country: cp.country,
+      boosts: Math.max(0, Math.floor(Number(cp.boosts || 0)))
+    };
 
-    posts = sortLeaderboardPosts(posts);
-    savePosts(posts);
-    signalLedgerUpdate({ op: 'post_upsert', id: cp.id });
-    return cp;
+    const data = await apiJson('/api/posts', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+
+    const created = canonicalizePost(data.post);
+    if (!created) return null;
+
+    // Update cache immediately
+    const cached = loadCachedPosts();
+    const merged = sortLeaderboardPosts([created, ...cached.filter(p => p && p.id !== created.id)]);
+    saveCachedPosts(merged);
+    signalLedgerUpdate({ op: 'post_create', id: created.id });
+
+    return created;
   };
 
-  // Add boosts; if boost map has no entry yet, fall back to stored post.boosts (paid boosts).
-  const addBoosts = (postId, add) => {
+  // addBoosts(postId, add=1): authoritative API call, then update cache from returned post
+  const addBoosts = async (postId, add) => {
     const id = String(postId || '').trim();
     const inc = Math.max(0, Math.floor(Number(add || 0)));
     if (!id || inc < 1) return { ok: false, boosts: 0 };
 
-    const map = loadBoosts();
-    let prev = Number(map[id] ?? 0);
-
-    // If boosts map doesn't yet have this post, fall back to stored post.boosts.
-    if (!(id in map)) {
-      const posts0 = prunePosts(loadPosts());
-      const p = posts0.find(x => x && x.id === id);
-      const pb = Number(p?.boosts ?? 0);
-      if (Number.isFinite(pb) && pb > prev) prev = pb;
+    // API only increments by 1 per call; loop for inc (kept simple + correct).
+    // If you want batching later, add an endpoint that accepts { add }.
+    let lastPost = null;
+    for (let i = 0; i < inc; i++) {
+      const data = await apiJson(`/api/posts/${encodeURIComponent(id)}/boost`, { method: 'POST' });
+      lastPost = canonicalizePost(data.post);
     }
+    if (!lastPost) return { ok: false, boosts: 0 };
 
-    const next = prev + inc;
-    map[id] = next;
-    saveBoosts(map);
+    // Update cache
+    const cached = loadCachedPosts();
+    const next = cached.map(p => (p && p.id === id) ? { ...p, boosts: lastPost.boosts } : p);
+    // If post not in cache yet (rare), prepend it.
+    const exists = next.some(p => p && p.id === id);
+    const merged = sortLeaderboardPosts(exists ? next : [lastPost, ...next]);
+    saveCachedPosts(merged);
 
-    // Sync into posts if exists
-    let posts = prunePosts(loadPosts());
-    const idx = posts.findIndex(p => p && p.id === id);
-    if (idx >= 0) {
-      posts[idx] = { ...posts[idx], boosts: next };
-      posts = sortLeaderboardPosts(posts);
-      savePosts(posts);
-    }
+    signalLedgerUpdate({ op: 'boost_add', id, add: inc, next: lastPost.boosts });
+    return { ok: true, boosts: lastPost.boosts };
+  };
 
-    signalLedgerUpdate({ op: 'boost_add', id, add: inc, next });
-    return { ok: true, boosts: next };
+  const deletePost = async (postId) => {
+    const id = String(postId || '').trim();
+    if (!id) return { ok: false };
+
+    await apiJson(`/api/posts/${encodeURIComponent(id)}`, { method: 'DELETE' });
+
+    const cached = loadCachedPosts().filter(p => p && p.id !== id);
+    saveCachedPosts(sortLeaderboardPosts(cached));
+    signalLedgerUpdate({ op: 'post_delete', id });
+    return { ok: true };
   };
 
   const totalsByCountry = (posts) => {
     const totals = Object.create(null);
     for (const c of COUNTRIES) totals[c] = 0;
 
-    const arr = Array.isArray(posts) ? posts : getLedger().posts;
+    const arr = Array.isArray(posts) ? posts : loadCachedPosts();
     for (const p of arr) {
       const c = String(p?.country || '').trim();
       if (!c) continue;
@@ -383,12 +397,19 @@
     return l;
   };
 
-  // ---- Export: the only public surface area ----
+  // ---- Init ----
+  // One-time migration of legacy localStorage ledgers into cache (not authority),
+  // so older clients don't appear empty before first API fetch.
+  migrateLegacyToCacheOnce();
+
+  // ---- Export surface ----
   window.NUNC = Object.freeze({
+    // API
+    API_BASE,
+
     // constants
     ONE_DAY_MS,
-    POSTS_KEY,
-    BOOSTS_KEY,
+    CACHE_POSTS_KEY,
     LEGACY_POST_KEYS,
     COUNTRIES,
 
@@ -401,23 +422,23 @@
     fmtTimeAgo,
     fmtExpiry,
 
-    // internal IO (kept public only if pages/tools need it)
-    loadPosts,
-    savePosts,
-    loadBoosts,
-    saveBoosts,
+    // cache IO (not authority)
+    loadCachedPosts,
+    saveCachedPosts,
+
+    // sorting/pruning
     prunePosts,
-    syncBoostsIntoPosts,
     sortLeaderboardPosts,
 
     // sync
     signalLedgerUpdate,
     watchLedger,
 
-    // operations
-    getLedger,
-    addOrUpdatePost,
-    addBoosts,
+    // operations (backend-first)
+    getLedger,         // async
+    addOrUpdatePost,   // async create
+    addBoosts,         // async
+    deletePost,        // async
     totalsByCountry,
     sortCountriesByTotals
   });
