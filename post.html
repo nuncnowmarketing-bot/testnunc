@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>nunc — Make a post</title>
   <link rel="stylesheet" href="./assets/app.css">
-  <!-- Page-specific only. Shared globals live in assets/app.css -->
   <style>
     /* post page layout */
     main{
@@ -50,7 +49,6 @@
     .meta{display:flex;gap:10px;align-items:center;color:var(--muted);font-size:14px;flex-wrap:wrap}
     .chip{border:1px solid var(--hair);background:rgba(255,255,255,0.04);padding:6px 10px;border-radius:999px}
 
-    /* keep only button variants that are NOT already in assets/app.css */
     .btn.danger{border-color:rgba(255,77,77,0.45);color:#ffb3b3;background:rgba(255,77,77,0.08)}
     .btn.danger:hover{background:rgba(255,77,77,0.12)}
 
@@ -114,6 +112,7 @@
 
     .fineprint{margin:10px 0 0;color:var(--muted);font-size:12px;line-height:1.35}
   </style>
+  <script src="./assets/app.js"></script>
 </head>
 <body>
   <div class="wrap">
@@ -230,174 +229,175 @@
     </div>
   </div>
 
-  <!-- Shared runtime (must load before page script) -->
-  <script src="./assets/app.js"></script>
-
   <script>
-    (function(){
-      if(!window.NUNC){
-        console.error('assets/app.js failed to load: window.NUNC missing');
-        return;
+  (() => {
+    'use strict';
+
+    if (!window.NUNC) {
+      console.error('assets/app.js failed to load: window.NUNC missing');
+      return;
+    }
+
+    const MAX = 200;
+
+    const elText    = document.getElementById('postText');
+    const elCount   = document.getElementById('charCount');
+    const elTTL     = document.getElementById('ttl');
+    const elCountry = document.getElementById('country');
+    const elToast   = document.getElementById('toast');
+    const elSubmit  = document.getElementById('submitBtn');
+
+    // payment modal elements
+    const payBackdrop = document.getElementById('payBackdrop');
+    const payAmount   = document.getElementById('payAmount');
+    const payCurrency = document.getElementById('payCurrency');
+    const fxSource    = document.getElementById('fxSource');
+    const usdOut      = document.getElementById('usdOut');
+    const boostOut    = document.getElementById('boostOut');
+    const cancelPay   = document.getElementById('cancelPay');
+    const confirmPay  = document.getElementById('confirmPay');
+
+    // Location: use the canonical list from NUNC only.
+    const pageCountry = window.NUNC.rand(window.NUNC.COUNTRIES);
+    elCountry.textContent = 'Location: ' + pageCountry;
+
+    const toastMsg = (m) => {
+      elToast.textContent = m;
+      elToast.style.display = 'block';
+      setTimeout(() => elToast.style.display = 'none', 1800);
+    };
+
+    // ---------- payment modal + FX conversion (UI-only) ----------
+    let pendingPostText = '';
+
+    const openPay = () => {
+      payBackdrop.style.display = 'flex';
+      payBackdrop.setAttribute('aria-hidden','false');
+      if(!payAmount.value) payAmount.value = '1';
+      fxSource.textContent='—';
+      usdOut.textContent='—';
+      boostOut.textContent='—';
+      computeConversion();
+    };
+
+    const closePay = () => {
+      payBackdrop.style.display = 'none';
+      payBackdrop.setAttribute('aria-hidden','true');
+      pendingPostText = '';
+    };
+
+    const parseAmount = (v)=>{
+      const n = Number(String(v).replace(',','.').trim());
+      return Number.isFinite(n) ? n : NaN;
+    };
+
+    async function convertToUSD(amount, currency){
+      if(currency === 'USD') return { usd: amount, source: 'USD (no conversion)' };
+
+      const url = 'https://api.frankfurter.app/latest?amount=' + encodeURIComponent(amount) +
+                  '&from=' + encodeURIComponent(currency) + '&to=USD';
+
+      try{
+        const res = await fetch(url, { cache:'no-store' });
+        if(!res.ok) throw new Error('fx_http_'+res.status);
+        const data = await res.json();
+        const usd = data && data.rates && typeof data.rates.USD === 'number' ? data.rates.USD : NaN;
+        if(!Number.isFinite(usd)) throw new Error('fx_parse');
+        return { usd, source: 'Frankfurter (ECB)' };
+      }catch(_){
+        return { usd: amount, source: 'FX unavailable (1:1 fallback)' };
       }
+    }
 
-      const MAX = 200;
-
-      // Keep your location countries separate from payment currencies.
-      // If you want the full list, replace with: const countries = NUNC.COUNTRIES;
-      const countries = ['Ireland','France','Germany','United States','Japan','Brazil','Canada','South Africa'];
-
-      const elText    = document.getElementById('postText');
-      const elCount   = document.getElementById('charCount');
-      const elTTL     = document.getElementById('ttl');
-      const elCountry = document.getElementById('country');
-      const elToast   = document.getElementById('toast');
-      const elSubmit  = document.getElementById('submitBtn');
-
-      // payment modal elements
-      const payBackdrop = document.getElementById('payBackdrop');
-      const payAmount   = document.getElementById('payAmount');
-      const payCurrency = document.getElementById('payCurrency');
-      const fxSource    = document.getElementById('fxSource');
-      const usdOut      = document.getElementById('usdOut');
-      const boostOut    = document.getElementById('boostOut');
-      const cancelPay   = document.getElementById('cancelPay');
-      const confirmPay  = document.getElementById('confirmPay');
-
-      const pageCountry = countries[Math.floor(Math.random()*countries.length)];
-      elCountry.textContent = 'Location: ' + pageCountry;
-
-      const toastMsg = (m) => {
-        elToast.textContent = m;
-        elToast.style.display = 'block';
-        setTimeout(() => elToast.style.display = 'none', 1800);
-      };
-
-      // ---------- payment modal + FX conversion ----------
-      let pendingPostText = '';
-
-      const openPay = () => {
-        payBackdrop.style.display = 'flex';
-        payBackdrop.setAttribute('aria-hidden','false');
-        if(!payAmount.value) payAmount.value = '1';
-        fxSource.textContent='—';
-        usdOut.textContent='—';
-        boostOut.textContent='—';
-        computeConversion();
-      };
-
-      const closePay = () => {
-        payBackdrop.style.display = 'none';
-        payBackdrop.setAttribute('aria-hidden','true');
-        pendingPostText = '';
-      };
-
-      const parseAmount = (v)=>{
-        const n = Number(String(v).replace(',','.').trim());
-        return Number.isFinite(n) ? n : NaN;
-      };
-
-      async function convertToUSD(amount, currency){
-        if(currency === 'USD') return { usd: amount, source: 'USD (no conversion)' };
-
-        const url = 'https://api.frankfurter.app/latest?amount=' + encodeURIComponent(amount) +
-                    '&from=' + encodeURIComponent(currency) + '&to=USD';
-
-        try{
-          const res = await fetch(url, { cache:'no-store' });
-          if(!res.ok) throw new Error('fx_http_'+res.status);
-          const data = await res.json();
-          const usd = data && data.rates && typeof data.rates.USD === 'number' ? data.rates.USD : NaN;
-          if(!Number.isFinite(usd)) throw new Error('fx_parse');
-          return { usd, source: 'Frankfurter (ECB)' };
-        }catch(_){
-          return { usd: amount, source: 'FX unavailable (1:1 fallback)' };
-        }
-      }
-
-      let conversionTimer = null;
-      const computeConversion = ()=>{
-        clearTimeout(conversionTimer);
-        conversionTimer = setTimeout(async ()=>{
-          const amt = parseAmount(payAmount.value);
-          const cur = payCurrency.value;
-
-          if(!Number.isFinite(amt) || amt <= 0){
-            fxSource.textContent='—';
-            usdOut.textContent='—';
-            boostOut.textContent='—';
-            return;
-          }
-
-          fxSource.textContent='Converting…';
-          usdOut.textContent='…';
-          boostOut.textContent='…';
-
-          const r = await convertToUSD(amt, cur);
-          const usd = r.usd;
-          const boosts = Math.max(0, Math.floor(usd));
-
-          fxSource.textContent = r.source;
-          usdOut.textContent = usd.toFixed(2) + ' USD';
-          boostOut.textContent = boosts + ' boosts';
-        }, 120);
-      };
-
-      payAmount.addEventListener('input', computeConversion);
-      payCurrency.addEventListener('change', computeConversion);
-
-      cancelPay.addEventListener('click', closePay);
-      payBackdrop.addEventListener('click', (e)=>{ if(e.target === payBackdrop) closePay(); });
-      document.addEventListener('keydown', (e)=>{ if(payBackdrop.style.display === 'flex' && e.key === 'Escape') closePay(); });
-
-      // ---------- UI updates ----------
-      const update = ()=>{
-        elCount.textContent = elText.value.length + '/' + MAX;
-        const expiry = NUNC.now() + NUNC.ONE_DAY_MS;
-        elTTL.textContent = 'Expires in 24h: ' + NUNC.fmtExpiry(expiry);
-      };
-
-      const finalizePost = async ()=>{
+    let conversionTimer = null;
+    const computeConversion = ()=>{
+      clearTimeout(conversionTimer);
+      conversionTimer = setTimeout(async ()=>{
         const amt = parseAmount(payAmount.value);
         const cur = payCurrency.value;
 
-        if(!Number.isFinite(amt) || amt <= 0) return toastMsg('Payment blocked: invalid amount.');
+        if(!Number.isFinite(amt) || amt <= 0){
+          fxSource.textContent='—';
+          usdOut.textContent='—';
+          boostOut.textContent='—';
+          return;
+        }
+
+        fxSource.textContent='Converting…';
+        usdOut.textContent='…';
+        boostOut.textContent='…';
 
         const r = await convertToUSD(amt, cur);
-        const boosts = Math.max(0, Math.floor(r.usd));
+        const usd = r.usd;
+        const boosts = Math.max(0, Math.floor(usd));
 
-        if(boosts < 1) return toastMsg('Payment blocked: must equal at least 1 boost (>= $1).');
-        if(!pendingPostText) return toastMsg('Post blocked: missing text.');
+        fxSource.textContent = r.source;
+        usdOut.textContent = usd.toFixed(2) + ' USD';
+        boostOut.textContent = boosts + ' boosts';
+      }, 120);
+    };
 
-        const p = {
-          id: Math.random().toString(36).slice(2) + Date.now().toString(36),
-          text: String(pendingPostText).slice(0, 200),
-          country: pageCountry,
-          createdAt: NUNC.now(),
-          expiresAt: NUNC.now() + NUNC.ONE_DAY_MS,
-          boosts
-        };
+    payAmount.addEventListener('input', computeConversion);
+    payCurrency.addEventListener('change', computeConversion);
 
-        NUNC.addOrUpdatePost(p);
+    cancelPay.addEventListener('click', closePay);
+    payBackdrop.addEventListener('click', (e)=>{ if(e.target === payBackdrop) closePay(); });
+    document.addEventListener('keydown', (e)=>{ if(payBackdrop.style.display === 'flex' && e.key === 'Escape') closePay(); });
 
-        closePay();
-        toastMsg('Posted with ' + boosts + ' boosts.');
-        setTimeout(() => location.href = './index.html', 450);
+    // ---------- UI updates (no ledger logic) ----------
+    const update = ()=>{
+      elCount.textContent = elText.value.length + '/' + MAX;
+      const expiry = window.NUNC.now() + window.NUNC.ONE_DAY_MS;
+      elTTL.textContent = 'Expires in 24h: ' + window.NUNC.fmtExpiry(expiry);
+    };
+
+    const submit = ()=>{
+      const t = (elText.value || '').trim();
+      if(!t) return toastMsg('Empty post blocked.');
+      if(window.NUNC.hasUrl(t)) return toastMsg('Links are blocked.');
+      pendingPostText = t;
+      openPay();
+    };
+
+    elSubmit.addEventListener('click', submit);
+    elText.addEventListener('input', update);
+    update();
+
+    // ---------- Single ledger call: post creation ----------
+    const finalizePost = async ()=>{
+      const amt = parseAmount(payAmount.value);
+      const cur = payCurrency.value;
+
+      if(!Number.isFinite(amt) || amt <= 0) return toastMsg('Payment blocked: invalid amount.');
+
+      const r = await convertToUSD(amt, cur);
+      const boosts = Math.max(0, Math.floor(r.usd));
+      if(boosts < 1) return toastMsg('Payment blocked: must equal at least 1 boost (>= $1).');
+      if(!pendingPostText) return toastMsg('Post blocked: missing text.');
+
+      // Create canonical post and let NUNC seed boosts map + persist.
+      const createdAt = window.NUNC.now();
+      const expiresAt = createdAt + window.NUNC.ONE_DAY_MS;
+      const id = (crypto && crypto.randomUUID) ? crypto.randomUUID() : (Math.random().toString(36).slice(2) + Date.now().toString(36));
+
+      const p = {
+        id,
+        text: String(pendingPostText).slice(0, 200),
+        country: pageCountry,
+        createdAt,
+        expiresAt,
+        boosts
       };
 
-      confirmPay.addEventListener('click', finalizePost);
+      window.NUNC.addOrUpdatePost(p);
 
-      const submit = ()=>{
-        const t = (elText.value || '').trim();
-        if(!t) return toastMsg('Empty post blocked.');
-        if(NUNC.hasUrl(t)) return toastMsg('Links are blocked.');
-        pendingPostText = t;
-        openPay();
-      };
+      closePay();
+      toastMsg('Posted with ' + boosts + ' boosts.');
+      setTimeout(() => location.href = './index.html', 450);
+    };
 
-      update();
-      elText.addEventListener('input', update);
-      elSubmit.addEventListener('click', submit);
-    })();
+    confirmPay.addEventListener('click', finalizePost);
+  })();
   </script>
 </body>
 </html>
