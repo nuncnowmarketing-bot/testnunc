@@ -150,6 +150,13 @@
         <div class="help">Rules enforced: text-only (no URLs), max 200 characters, post expires after 24 hours.</div>
       </div>
     </main>
+
+    <footer>
+      <div class="foot">
+        <div>© nunc</div>
+        <div>terms · transparency · ledger</div>
+      </div>
+    </footer>
   </div>
 
   <div class="toast" id="toast"></div>
@@ -375,7 +382,6 @@
       if(boosts < 1) return toastMsg('Payment blocked: must equal at least 1 boost (>= $1).');
       if(!pendingPostText) return toastMsg('Post blocked: missing text.');
 
-      // Create canonical post and let NUNC seed boosts map + persist.
       const createdAt = window.NUNC.now();
       const expiresAt = createdAt + window.NUNC.ONE_DAY_MS;
       const id = (crypto && crypto.randomUUID) ? crypto.randomUUID() : (Math.random().toString(36).slice(2) + Date.now().toString(36));
