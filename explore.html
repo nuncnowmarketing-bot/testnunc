@@ -5,138 +5,138 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>nunc — explore</title>
   <link rel="stylesheet" href="./assets/app.css">
- <style>
-  .shell{
-    width:100%;
-    border:1px solid var(--hair);
-    background:var(--panel);
-    border-radius:0;
-    overflow:hidden;
-  }
+  <style>
+    .shell{
+      width:100%;
+      border:1px solid var(--hair);
+      background:var(--panel);
+      border-radius:0;
+      overflow:hidden;
+    }
 
-  .shell-header{
-    padding:18px 18px 14px;
-    border-bottom:1px solid var(--hair);
-    display:flex;
-    align-items:baseline;
-    justify-content:space-between;
-    gap:12px;
-  }
+    .shell-header{
+      padding:18px 18px 14px;
+      border-bottom:1px solid var(--hair);
+      display:flex;
+      align-items:baseline;
+      justify-content:space-between;
+      gap:12px;
+    }
 
-  .shell-title{
-    font-size:22px;
-    font-weight:600;
-    margin:0;
-    letter-spacing:0.1px;
-  }
+    .shell-title{
+      font-size:22px;
+      font-weight:600;
+      margin:0;
+      letter-spacing:0.1px;
+    }
 
-  .shell-sub{
-    font-size:13px;
-    color:var(--muted);
-    letter-spacing:0.6px;
-    text-transform:uppercase;
-    white-space:nowrap;
-  }
+    .shell-sub{
+      font-size:13px;
+      color:var(--muted);
+      letter-spacing:0.6px;
+      text-transform:uppercase;
+      white-space:nowrap;
+    }
 
-  .tools{
-    padding:14px 18px;
-    border-bottom:1px solid var(--hair);
-    background:linear-gradient(to bottom, rgba(0,0,0,0.08), rgba(0,0,0,0));
-    display:flex;
-    flex-direction:column;
-    gap:10px;
-  }
+    .tools{
+      padding:14px 18px;
+      border-bottom:1px solid var(--hair);
+      background:linear-gradient(to bottom, rgba(0,0,0,0.08), rgba(0,0,0,0));
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
 
-  .searchRow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+    .searchRow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
 
-  .search{
-    flex:1;
-    min-width:260px;
-    display:flex;
-    align-items:center;
-    gap:10px;
-    padding:10px 12px;
-    border:1px solid var(--hair);
-    border-radius:14px;
-    background:rgba(255,255,255,0.03);
-  }
+    .search{
+      flex:1;
+      min-width:260px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 12px;
+      border:1px solid var(--hair);
+      border-radius:14px;
+      background:rgba(255,255,255,0.03);
+    }
 
-  .searchIcon{color:var(--muted);font-size:16px;line-height:1;user-select:none;}
+    .searchIcon{color:var(--muted);font-size:16px;line-height:1;user-select:none;}
 
-  input[type="text"]{
-    width:100%;
-    border:0;
-    outline:none;
-    background:transparent;
-    color:var(--text);
-    font-size:16px;
-    font-family:inherit;
-    letter-spacing:0.2px;
-  }
+    input[type="text"]{
+      width:100%;
+      border:0;
+      outline:none;
+      background:transparent;
+      color:var(--text);
+      font-size:16px;
+      font-family:inherit;
+      letter-spacing:0.2px;
+    }
 
-  input::placeholder{color:rgba(255,255,255,0.45)}
+    input::placeholder{color:rgba(255,255,255,0.45)}
 
-  .hint{font-size:13px;color:var(--muted);line-height:1.35;}
+    .hint{font-size:13px;color:var(--muted);line-height:1.35;}
 
-  .results{display:flex;flex-direction:column}
+    .results{display:flex;flex-direction:column}
 
-  .row{
-    display:grid;
-    grid-template-columns: 1fr 120px;
-    gap:14px;
-    padding:14px 18px;
-    border-bottom:1px solid var(--hair);
-    align-items:center;
-    cursor:pointer;
-  }
+    .row{
+      display:grid;
+      grid-template-columns: 1fr 120px;
+      gap:14px;
+      padding:14px 18px;
+      border-bottom:1px solid var(--hair);
+      align-items:center;
+      cursor:pointer;
+    }
 
-  .row:last-child{border-bottom:none}
+    .row:last-child{border-bottom:none}
 
-  .country{
-    font-size:18px;
-    font-weight:600;
-    line-height:1.2;
-    word-wrap:break-word;
-    overflow-wrap:anywhere;
-  }
+    .country{
+      font-size:18px;
+      font-weight:600;
+      line-height:1.2;
+      word-wrap:break-word;
+      overflow-wrap:anywhere;
+    }
 
-  .meta{
-    font-size:13px;
-    color:var(--muted);
-    display:flex;
-    gap:8px;
-    flex-wrap:wrap;
-    align-items:center;
-    margin-top:6px;
-  }
+    .meta{
+      font-size:13px;
+      color:var(--muted);
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+      margin-top:6px;
+    }
 
-  .dot{
-    width:3px;
-    height:3px;
-    border-radius:999px;
-    background:var(--muted);
-    opacity:0.6;
-    display:inline-block;
-    transform:translateY(-1px);
-  }
+    .dot{
+      width:3px;
+      height:3px;
+      border-radius:999px;
+      background:var(--muted);
+      opacity:0.6;
+      display:inline-block;
+      transform:translateY(-1px);
+    }
 
-  .go{
-    justify-self:end;
-    padding:9px 12px;
-    border:1px solid var(--hair);
-    border-radius:12px;
-    background:transparent;
-    color:var(--muted);
-    font-family:inherit;
-    font-size:14px;
-    cursor:pointer;
-    user-select:none;
-  }
+    .go{
+      justify-self:end;
+      padding:9px 12px;
+      border:1px solid var(--hair);
+      border-radius:12px;
+      background:transparent;
+      color:var(--muted);
+      font-family:inherit;
+      font-size:14px;
+      cursor:pointer;
+      user-select:none;
+    }
 
-  .go:hover{color:var(--text);background:var(--pill)}
+    .go:hover{color:var(--text);background:var(--pill)}
 
-  .empty{padding:18px;color:var(--muted);font-size:13px}
-</style>
+    .empty{padding:18px;color:var(--muted);font-size:13px}
+  </style>
   <script src="./assets/app.js"></script>
 </head>
 <body>
@@ -167,7 +167,7 @@
             <input id="q" type="text" placeholder="Search countries" />
           </div>
         </div>
-        <div class="hint">Ranking uses boosts from posts created in <code>post.html</code> and boosted in <code>index.html</code> (localStorage ledger).</div>
+        <div class="hint">Ranking uses the shared ledger in <code>assets/app.js</code>.</div>
       </div>
 
       <div id="results" class="results"></div>
@@ -185,115 +185,56 @@
 
 <script>
 (() => {
-  // Shared storage keys (must match post.html + index.html)
-  const POSTS_KEY  = 'nunc_posts_v1';   // array of {id,text,country,createdAt,expiresAt,boosts}
-  const BOOSTS_KEY = 'nunc_boosts_v1';  // map { [postId]: number }
-  const ONE_DAY_MS = 86400000;
-  const now = () => Date.now();
+  'use strict';
 
-  const countries = [
-    'Afghanistan','Albania','Algeria','Andorra','Angola','Antigua and Barbuda','Argentina','Armenia','Australia','Austria','Azerbaijan','Bahamas','Bahrain','Bangladesh','Barbados','Belarus','Belgium','Belize','Benin','Bhutan','Bolivia','Bosnia and Herzegovina','Botswana','Brazil','Brunei','Bulgaria','Burkina Faso','Burundi','Cabo Verde','Cambodia','Cameroon','Canada','Central African Republic','Chad','Chile','China','Colombia','Comoros','Congo','Costa Rica','Côte d’Ivoire','Croatia','Cuba','Cyprus','Czechia','Denmark','Djibouti','Dominica','Dominican Republic','Ecuador','Egypt','El Salvador','Equatorial Guinea','Eritrea','Estonia','Eswatini','Ethiopia','Fiji','Finland','France','Gabon','Gambia','Georgia','Germany','Ghana','Greece','Grenada','Guatemala','Guinea','Guinea-Bissau','Guyana','Haiti','Honduras','Hungary','Iceland','India','Indonesia','Iran','Iraq','Ireland','Israel','Italy','Jamaica','Japan','Jordan','Kazakhstan','Kenya','Kiribati','Kosovo','Kuwait','Kyrgyzstan','Laos','Latvia','Lebanon','Lesotho','Liberia','Libya','Liechtenstein','Lithuania','Luxembourg','Madagascar','Malawi','Malaysia','Maldives','Mali','Malta','Marshall Islands','Mauritania','Mauritius','Mexico','Micronesia','Moldova','Monaco','Mongolia','Montenegro','Morocco','Mozambique','Myanmar','Namibia','Nauru','Nepal','Netherlands','New Zealand','Nicaragua','Niger','Nigeria','North Macedonia','Norway','Oman','Pakistan','Palau','Palestine','Panama','Papua New Guinea','Paraguay','Peru','Philippines','Poland','Portugal','Qatar','Romania','Russia','Rwanda','Saint Kitts and Nevis','Saint Lucia','Saint Vincent and the Grenadines','Samoa','San Marino','Sao Tome and Principe','Saudi Arabia','Senegal','Serbia','Seychelles','Sierra Leone','Singapore','Slovakia','Slovenia','Solomon Islands','Somalia','South Africa','South Korea','South Sudan','Spain','Sri Lanka','Sudan','Suriname','Sweden','Switzerland','Syria','Tajikistan','Tanzania','Thailand','Timor-Leste','Togo','Tonga','Trinidad and Tobago','Tunisia','Turkey','Turkmenistan','Tuvalu','Uganda','Ukraine','United Arab Emirates','United Kingdom','United States','Uruguay','Uzbekistan','Vanuatu','Vatican City','Venezuela','Vietnam','Yemen','Zambia','Zimbabwe'
-  ];
+  if (!window.NUNC) {
+    console.error('NUNC runtime missing: include ./assets/app.js before this script.');
+    return;
+  }
 
   const Q = document.getElementById('q');
   const RESULTS = document.getElementById('results');
   const EMPTY = document.getElementById('empty');
 
-  function loadPosts(){
-    try{ return JSON.parse(localStorage.getItem(POSTS_KEY) || '[]') || []; }
-    catch(_){ return []; }
-  }
-  function savePosts(arr){ localStorage.setItem(POSTS_KEY, JSON.stringify(arr)); }
-
-  function loadBoosts(){
-    try{ return JSON.parse(localStorage.getItem(BOOSTS_KEY) || '{}') || {}; }
-    catch(_){ return {}; }
-  }
-
-  function prunePosts(posts){
-    const alive = posts.filter(p => {
-      if(!p) return false;
-      if(typeof p.expiresAt === 'number') return p.expiresAt > now();
-      if(typeof p.createdAt === 'number') return (now() - p.createdAt) < ONE_DAY_MS;
-      return true;
-    });
-    if(alive.length !== posts.length) savePosts(alive);
-    return alive;
-  }
-
-  function computeTotalsByCountry(){
-    const totals = Object.create(null);
-    for(const c of countries) totals[c] = 0;
-
-    const boostsMap = loadBoosts();
-    let posts = prunePosts(loadPosts());
-
-    // Sync boosts map into posts (so post boosts and boost ledger never diverge)
-    let changed = false;
-    posts = posts.map(p => {
-      if(!p || !p.id) return p;
-      const b = Number(boostsMap[p.id] ?? p.boosts ?? 0);
-      if(Number(p.boosts || 0) !== b){ changed = true; return { ...p, boosts: b }; }
-      return p;
-    });
-    if(changed) savePosts(posts);
-
-    for(const p of posts){
-      if(!p || !p.country) continue;
-      const c = String(p.country);
-      if(!(c in totals)) totals[c] = 0;
-      totals[c] += Number(p.boosts || 0);
-    }
-
-    return totals;
-  }
-
-  function sortCountriesByTotals(list, totals){
-    return list.slice().sort((a,b) => {
-      const ta = Number(totals[a] || 0);
-      const tb = Number(totals[b] || 0);
-      if(tb !== ta) return tb - ta;
-      return a.localeCompare(b);
-    });
-  }
-
   let order = [];
   let rankMap = Object.create(null);
-  let latestTotals = Object.create(null);
+  let totals = Object.create(null);
 
-  function rebuildRankMap(){
+  const rebuildRankMap = () => {
     rankMap = Object.create(null);
-    for(let i=0;i<order.length;i++) rankMap[order[i]] = i+1;
-  }
+    for (let i = 0; i < order.length; i++) rankMap[order[i]] = i + 1;
+  };
 
-  function recompute(){
-    latestTotals = computeTotalsByCountry();
-    order = sortCountriesByTotals(countries, latestTotals);
+  const recompute = () => {
+    const ledger = NUNC.getLedger();              // { posts, boosts }
+    totals = NUNC.totalsByCountry(ledger.posts);  // { country: totalBoosts }
+    order = NUNC.sortCountriesByTotals(totals);   // [countries...]
     rebuildRankMap();
-  }
+  };
 
-  function render(list){
+  const render = (list) => {
     RESULTS.innerHTML = '';
-    if(!list.length){
+    if (!list.length) {
       EMPTY.style.display = 'block';
       return;
     }
     EMPTY.style.display = 'none';
 
     const frag = document.createDocumentFragment();
-    for(const c of list){
-      const r = document.createElement('div');
-      r.className = 'row';
+
+    for (const c of list) {
+      const row = document.createElement('div');
+      row.className = 'row';
 
       const left = document.createElement('div');
 
       const title = document.createElement('div');
       title.className = 'country';
-      title.textContent = `#${rankMap[c]} — ${c}`;
+      title.textContent = `#${rankMap[c] || '—'} — ${c}`;
 
       const meta = document.createElement('div');
       meta.className = 'meta';
-      const total = Number(latestTotals[c] || 0);
+      const total = Number(totals[c] || 0);
       meta.innerHTML = `<span>${total} boosts</span>`;
 
       left.appendChild(title);
@@ -308,66 +249,37 @@
         location.href = `map.html?country=${encodeURIComponent(c)}`;
       });
 
-      r.appendChild(left);
-      r.appendChild(go);
-      r.addEventListener('click', () => {
+      row.appendChild(left);
+      row.appendChild(go);
+
+      row.addEventListener('click', () => {
         location.href = `map.html?country=${encodeURIComponent(c)}`;
       });
 
-      frag.appendChild(r);
+      frag.appendChild(row);
     }
-    RESULTS.appendChild(frag);
-  }
 
-  function filter(){
+    RESULTS.appendChild(frag);
+  };
+
+  const filter = () => {
     const q = (Q.value || '').trim().toLowerCase();
-    if(!q){
+    if (!q) {
       render(order);
       return;
     }
     render(order.filter(c => c.toLowerCase().includes(q)));
-  }
+  };
 
-  function applyAndRender(){
+  const applyAndRender = () => {
     recompute();
     filter();
-  }
+  };
 
   Q.addEventListener('input', filter);
 
-  // Cross-tab and (optionally) same-tab update signals
-  const bc = ('BroadcastChannel' in window) ? new BroadcastChannel('nunc_ledger') : null;
-  if(bc){
-    bc.onmessage = (ev) => {
-      if(ev && ev.data && ev.data.type === 'ledger_update') applyAndRender();
-    };
-  }
-
-  window.addEventListener('storage', (e) => {
-    if(!e) return;
-    if(e.key === POSTS_KEY || e.key === BOOSTS_KEY) applyAndRender();
-  });
-
-  // Poll fallback for embed contexts where storage events are unreliable.
-  let lastSig = '';
-  setInterval(() => {
-    try{
-      const sig = (localStorage.getItem(POSTS_KEY) || '') + '|' + (localStorage.getItem(BOOSTS_KEY) || '');
-      if(sig !== lastSig){ lastSig = sig; applyAndRender(); }
-    }catch(_){ /* ignore */ }
-  }, 1200);
-
-  // ---------- Minimal tests (logic-only, no localStorage writes) ----------
-  function runTests(){
-    try{
-      const t = { A: 2, B: 2, C: 5, D: 0 };
-      const out = sortCountriesByTotals(['B','A','D','C'], t);
-      console.assert(out[0] === 'C', 'test: highest first');
-      console.assert(out[1] === 'A' && out[2] === 'B', 'test: tie breaks alphabetical');
-      console.assert(out[3] === 'D', 'test: zeros last');
-    }catch(_){ /* ignore */ }
-  }
-  runTests();
+  // Single subscription point: all cross-tab + storage + polling is inside NUNC.watchLedger()
+  NUNC.watchLedger(() => applyAndRender());
 
   // Initial render
   applyAndRender();
