@@ -4,91 +4,91 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>nunc · log in</title>
-<link rel="stylesheet" href="./assets/app.css">
- <style>
-  main{
-    flex:1;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    padding:40px 20px;
-  }
+  <link rel="stylesheet" href="./assets/app.css">
+  <style>
+    main{
+      flex:1;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:40px 20px;
+    }
 
-  .login{
-    width:100%;
-    max-width:420px;
-    background:var(--panel);
-    border:1px solid var(--hair);
-    border-radius:18px;
-    padding:36px 34px 40px;
-  }
+    .login{
+      width:100%;
+      max-width:420px;
+      background:var(--panel);
+      border:1px solid var(--hair);
+      border-radius:18px;
+      padding:36px 34px 40px;
+    }
 
-  .login h1{
-    margin:0 0 6px;
-    font-size:28px;
-    font-weight:600;
-  }
+    .login h1{
+      margin:0 0 6px;
+      font-size:28px;
+      font-weight:600;
+    }
 
-  .sub{
-    font-size:14px;
-    color:var(--muted);
-    margin-bottom:28px;
-    line-height:1.4;
-  }
+    .sub{
+      font-size:14px;
+      color:var(--muted);
+      margin-bottom:28px;
+      line-height:1.4;
+    }
 
-  .field{
-    display:flex;
-    flex-direction:column;
-    gap:6px;
-    margin-bottom:18px;
-  }
+    .field{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      margin-bottom:18px;
+    }
 
-  label{
-    font-size:14px;
-    color:var(--muted);
-  }
+    label{
+      font-size:14px;
+      color:var(--muted);
+    }
 
-  input{
-    background:transparent;
-    border:1px solid var(--hair);
-    border-radius:12px;
-    padding:12px 14px;
-    color:var(--text);
-    font-family:inherit;
-    font-size:16px;
-  }
+    input{
+      background:transparent;
+      border:1px solid var(--hair);
+      border-radius:12px;
+      padding:12px 14px;
+      color:var(--text);
+      font-family:inherit;
+      font-size:16px;
+    }
 
-  input:focus{
-    outline:none;
-    border-color:var(--text);
-  }
+    input:focus{
+      outline:none;
+      border-color:var(--text);
+    }
 
-  .actions{
-    margin-top:26px;
-    display:flex;
-    flex-direction:column;
-    gap:12px;
-  }
+    .actions{
+      margin-top:26px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
 
-  button{
-    padding:12px 16px;
-    border-radius:999px;
-    border:1px solid var(--hair);
-    background:var(--pill);
-    color:var(--text);
-    font-family:inherit;
-    font-size:16px;
-    cursor:pointer;
-  }
+    button{
+      padding:12px 16px;
+      border-radius:999px;
+      border:1px solid var(--hair);
+      background:var(--pill);
+      color:var(--text);
+      font-family:inherit;
+      font-size:16px;
+      cursor:pointer;
+    }
 
-  button:hover{ background:var(--pillHover); }
+    button:hover{ background:var(--pillHover); }
 
-  .alt{
-    text-align:center;
-    font-size:13px;
-    color:var(--muted);
-  }
-</style>
+    .alt{
+      text-align:center;
+      font-size:13px;
+      color:var(--muted);
+    }
+  </style>
   <script src="./assets/app.js"></script>
 </head>
 <body>
@@ -108,26 +108,24 @@
     <main>
       <section class="login">
         <h1>Log in</h1>
-        <div class="sub">
-          Identity is optional. Conviction is not.
-        </div>
+        <div class="sub">Identity is optional. Conviction is not.</div>
 
-        <div class="field">
-          <label>Email</label>
-          <input type="email" placeholder="you@domain.com">
-        </div>
-
-        <div class="field">
-          <label>Password</label>
-          <input type="password" placeholder="••••••••">
-        </div>
-
-        <div class="actions">
-          <button>Continue</button>
-          <div class="alt">
-            No account · create one
+        <form id="loginForm" autocomplete="on">
+          <div class="field">
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" placeholder="you@domain.com" />
           </div>
-        </div>
+
+          <div class="field">
+            <label for="password">Password</label>
+            <input id="password" name="password" type="password" placeholder="••••••••" />
+          </div>
+
+          <div class="actions">
+            <button type="submit">Continue</button>
+            <div class="alt">No account · create one</div>
+          </div>
+        </form>
       </section>
     </main>
 
@@ -138,5 +136,26 @@
       </div>
     </footer>
   </div>
+
+  <script>
+  (() => {
+    'use strict';
+
+    // This page has no ledger logic by design.
+    // It only demonstrates a UI flow and uses NUNC only for optional runtime presence.
+    if (!window.NUNC) {
+      console.warn('NUNC runtime missing: include ./assets/app.js');
+    }
+
+    const form = document.getElementById('loginForm');
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      // Static demo: no auth. Keep UX deterministic.
+      // Redirect back to leaderboard.
+      location.href = './index.html';
+    });
+  })();
+  </script>
 </body>
 </html>
