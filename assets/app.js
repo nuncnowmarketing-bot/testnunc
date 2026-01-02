@@ -1,18 +1,22 @@
 /* assets/app.js
    nunc shared runtime: ledger, sync, formatting, country list, safe storage helpers.
    Exposes window.NUNC (no build step, no modules).
+
+   Single source of truth:
+   - Posts live in POSTS_KEY (array of canonical posts)
+   - Boost totals live in BOOSTS_KEY (map postId -> boosts)
+   - Pages NEVER define keys/countries/pruning/totals/sorting/sync/polling
 */
 (() => {
   'use strict';
 
-  const NAMESPACE = 'nunc';
   const ONE_DAY_MS = 86400000;
 
   // Canonical keys
   const POSTS_KEY = 'nunc_posts_v1';    // array of posts
   const BOOSTS_KEY = 'nunc_boosts_v1';  // map { [postId]: number }
 
-  // Legacy keys your post page has used before (read + migrate)
+  // Legacy keys (read + merge + migrate once)
   const LEGACY_POST_KEYS = [
     POSTS_KEY,
     'nunc_posts',
@@ -20,7 +24,7 @@
     'nunc_leaderboard_v1'
   ];
 
-  // Broadcast channel (cross-tab, same origin)
+  // Cross-tab channel (same origin)
   const BC = ('BroadcastChannel' in window) ? new BroadcastChannel('nunc_ledger') : null;
 
   const now = () => Date.now();
@@ -41,8 +45,8 @@
     try { localStorage.removeItem(k); return true; } catch (_) { return false; }
   };
 
-  // ---- Countries (UN members + Kosovo + Palestine; no dependencies/non-recognised states beyond those) ----
-  // Note: Keep ordering stable (alphabetical).
+  // ---- Countries (UN members + Kosovo + Palestine; no other dependencies/non-recognised states) ----
+  // Keep ordering stable (alphabetical).
   const COUNTRIES = [
     'Afghanistan','Albania','Algeria','Andorra','Angola','Antigua and Barbuda','Argentina','Armenia','Australia','Austria','Azerbaijan',
     'Bahamas','Bahrain','Bangladesh','Barbados','Belarus','Belgium','Belize','Benin','Bhutan','Bolivia','Bosnia and Herzegovina','Botswana','Brazil','Brunei','Bulgaria','Burkina Faso','Burundi',
@@ -92,9 +96,7 @@
     const country = String(p.country || p.location || '').trim() || '';
 
     // Try canonical boosts first; then common aliases; finally 0.
-    const boosts =
-      (Number.isFinite(p.boosts) ? Number(p.boosts) : NaN);
-
+    const boosts = (Number.isFinite(p.boosts) ? Number(p.boosts) : NaN);
     const alt =
       Number.isFinite(p.score) ? Number(p.score) :
       Number.isFinite(p.points) ? Number(p.points) :
@@ -162,9 +164,11 @@
   const savePosts = (posts) => {
     const arr = Array.isArray(posts) ? posts : [];
     const canon = dedupeById(arr);
-    // Write canonical key only (stop multiplying state across keys).
+
+    // Write canonical key only.
     safeSet(POSTS_KEY, JSON.stringify(canon));
-    // Optionally clean old keys to avoid divergence.
+
+    // Clean old keys to avoid divergence.
     for (const k of LEGACY_POST_KEYS) {
       if (k !== POSTS_KEY) safeRemove(k);
     }
@@ -209,7 +213,7 @@
       if (BC) BC.postMessage({ type: 'ledger_update', t: now(), ...(payload || {}) });
     } catch (_) {}
 
-    // Same-tab (custom event)
+    // Same-tab
     try {
       window.dispatchEvent(new CustomEvent('nunc:ledger_update', { detail: payload || {} }));
     } catch (_) {}
@@ -279,6 +283,9 @@
     });
   };
 
+  // ---- URL rule (block obvious links) ----
+  const hasUrl = (s) => /(https?:\/\/|www\.|\.[a-z]{2,})(\/|$)/i.test(String(s || ''));
+
   // ---- High-level operations used by pages ----
   const getLedger = () => {
     const boosts = loadBoosts();
@@ -289,7 +296,7 @@
     return { posts, boosts };
   };
 
-  // UPDATED: seeds/merges paid boosts into BOOSTS_KEY at post creation time.
+  // Upsert post; seed/merge paid boosts into BOOSTS_KEY so they persist.
   const addOrUpdatePost = (post) => {
     const cp = canonicalizePost(post);
     if (!cp) return null;
@@ -316,17 +323,16 @@
     return cp;
   };
 
-  // UPDATED: if boost map has no entry yet, fall back to stored post.boosts (paid boosts).
+  // Add boosts; if boost map has no entry yet, fall back to stored post.boosts (paid boosts).
   const addBoosts = (postId, add) => {
     const id = String(postId || '').trim();
     const inc = Math.max(0, Math.floor(Number(add || 0)));
     if (!id || inc < 1) return { ok: false, boosts: 0 };
 
     const map = loadBoosts();
-
     let prev = Number(map[id] ?? 0);
 
-    // If boosts map doesn't yet have this post, fall back to stored post.boosts (paid boosts).
+    // If boosts map doesn't yet have this post, fall back to stored post.boosts.
     if (!(id in map)) {
       const posts0 = prunePosts(loadPosts());
       const p = posts0.find(x => x && x.id === id);
@@ -377,10 +383,7 @@
     return l;
   };
 
-  // ---- URL rule (block obvious links) ----
-  const hasUrl = (s) => /(https?:\/\/|www\.|\.[a-z]{2,})(\/|$)/i.test(String(s || ''));
-
-  // ---- Export ----
+  // ---- Export: the only public surface area ----
   window.NUNC = Object.freeze({
     // constants
     ONE_DAY_MS,
@@ -398,7 +401,7 @@
     fmtTimeAgo,
     fmtExpiry,
 
-    // ledger
+    // internal IO (kept public only if pages/tools need it)
     loadPosts,
     savePosts,
     loadBoosts,
