@@ -5,235 +5,235 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>nunc</title>
   <link rel="stylesheet" href="./assets/app.css">
-<style>
-  .feed-shell{
-    width:100%;
-    max-width:100%;
-    margin:0;
-    border:1px solid var(--hair);
-    background:var(--panel);
-    border-radius:0;
-    overflow:hidden;
-  }
+  <style>
+    .feed-shell{
+      width:100%;
+      max-width:100%;
+      margin:0;
+      border:1px solid var(--hair);
+      background:var(--panel);
+      border-radius:0;
+      overflow:hidden;
+    }
 
-  .feed-header{
-    padding:18px 18px 14px;
-    border-bottom:1px solid var(--hair);
-    display:flex;
-    align-items:baseline;
-    justify-content:space-between;
-    gap:12px;
-  }
+    .feed-header{
+      padding:18px 18px 14px;
+      border-bottom:1px solid var(--hair);
+      display:flex;
+      align-items:baseline;
+      justify-content:space-between;
+      gap:12px;
+    }
 
-  .feed-title{
-    font-size:22px;
-    font-weight:600;
-    margin:0;
-    letter-spacing:0.1px;
-  }
+    .feed-title{
+      font-size:22px;
+      font-weight:600;
+      margin:0;
+      letter-spacing:0.1px;
+    }
 
-  .feed{display:flex;flex-direction:column;}
+    .feed{display:flex;flex-direction:column;}
 
-  .post{
-    display:grid;
-    grid-template-columns: 64px 1fr 44px;
-    gap:14px;
-    padding:16px 18px;
-    border-bottom:1px solid var(--hair);
-  }
+    .post{
+      display:grid;
+      grid-template-columns: 64px 1fr 44px;
+      gap:14px;
+      padding:16px 18px;
+      border-bottom:1px solid var(--hair);
+    }
 
-  .rank{
-    font-size:14px;
-    color:var(--muted);
-    text-align:right;
-    padding-top:2px;
-    white-space:nowrap;
-  }
+    .rank{
+      font-size:14px;
+      color:var(--muted);
+      text-align:right;
+      padding-top:2px;
+      white-space:nowrap;
+    }
 
-  .content{
-    display:flex;
-    flex-direction:column;
-    gap:6px;
-    min-width:0;
-  }
+    .content{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      min-width:0;
+    }
 
-  .title{
-    font-size:18px;
-    font-weight:600;
-    line-height:1.25;
-    word-wrap:break-word;
-    overflow-wrap:anywhere;
-  }
+    .title{
+      font-size:18px;
+      font-weight:600;
+      line-height:1.25;
+      word-wrap:break-word;
+      overflow-wrap:anywhere;
+    }
 
-  .meta{
-    font-size:13px;
-    line-height:1.35;
-    color:var(--muted);
-    display:flex;
-    gap:8px;
-    flex-wrap:wrap;
-    align-items:center;
-  }
+    .meta{
+      font-size:13px;
+      line-height:1.35;
+      color:var(--muted);
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
 
-  .dot{
-    width:3px;
-    height:3px;
-    border-radius:999px;
-    background:var(--muted);
-    opacity:0.6;
-    display:inline-block;
-    transform:translateY(-1px);
-  }
+    .dot{
+      width:3px;
+      height:3px;
+      border-radius:999px;
+      background:var(--muted);
+      opacity:0.6;
+      display:inline-block;
+      transform:translateY(-1px);
+    }
 
-  .boost{
-    position:relative;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:18px;
-    color:var(--muted);
-    cursor:pointer;
-    user-select:none;
-    width:44px;
-    height:36px;
-    border:1px solid transparent;
-    border-radius:10px;
-    background:transparent;
-  }
+    .boost{
+      position:relative;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:18px;
+      color:var(--muted);
+      cursor:pointer;
+      user-select:none;
+      width:44px;
+      height:36px;
+      border:1px solid transparent;
+      border-radius:10px;
+      background:transparent;
+    }
 
-  .boost:hover{
-    color:var(--text);
-    border-color:var(--hair);
-    background:var(--pill);
-  }
+    .boost:hover{
+      color:var(--text);
+      border-color:var(--hair);
+      background:var(--pill);
+    }
 
-  .boost::after{
-    content:"boost";
-    position:absolute;
-    bottom:120%;
-    right:0;
-    padding:6px 10px;
-    font-size:12px;
-    color:var(--text);
-    background:var(--panel2);
-    border:1px solid var(--hair);
-    border-radius:8px;
-    white-space:nowrap;
-    opacity:0;
-    pointer-events:none;
-    transform:translateY(4px);
-    transition:opacity 0.15s ease, transform 0.15s ease;
-  }
+    .boost::after{
+      content:"boost";
+      position:absolute;
+      bottom:120%;
+      right:0;
+      padding:6px 10px;
+      font-size:12px;
+      color:var(--text);
+      background:var(--panel2);
+      border:1px solid var(--hair);
+      border-radius:8px;
+      white-space:nowrap;
+      opacity:0;
+      pointer-events:none;
+      transform:translateY(4px);
+      transition:opacity 0.15s ease, transform 0.15s ease;
+    }
 
-  .boost:hover::after{opacity:1;transform:translateY(0)}
+    .boost:hover::after{opacity:1;transform:translateY(0)}
 
-  .feed-footer{
-    padding:14px 18px;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:12px;
-    color:var(--muted);
-    font-size:13px;
-    border-top:1px solid var(--hair);
-    background:linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,0.12));
-  }
+    .feed-footer{
+      padding:14px 18px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      color:var(--muted);
+      font-size:13px;
+      border-top:1px solid var(--hair);
+      background:linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,0.12));
+    }
 
-  .status{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    min-height:20px;
-  }
+    .status{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      min-height:20px;
+    }
 
-  .spinner{
-    width:14px;
-    height:14px;
-    border-radius:999px;
-    border:2px solid var(--hair);
-    border-top-color:rgba(255,255,255,0.55);
-    animation:spin 0.8s linear infinite;
-    display:none;
-  }
+    .spinner{
+      width:14px;
+      height:14px;
+      border-radius:999px;
+      border:2px solid var(--hair);
+      border-top-color:rgba(255,255,255,0.55);
+      animation:spin 0.8s linear infinite;
+      display:none;
+    }
 
-  .loading .spinner{display:inline-block}
-  @keyframes spin{to{transform:rotate(360deg)}}
+    .loading .spinner{display:inline-block}
+    @keyframes spin{to{transform:rotate(360deg)}}
 
-  @media (max-width:520px){
-    .post{grid-template-columns:56px 1fr 44px; padding:14px 14px}
-    .feed-header{padding:16px 14px 12px}
-    .title{font-size:17px}
-  }
+    @media (max-width:520px){
+      .post{grid-template-columns:56px 1fr 44px; padding:14px 14px}
+      .feed-header{padding:16px 14px 12px}
+      .title{font-size:17px}
+    }
 
-  .toast{
-    position:fixed;
-    left:50%;
-    bottom:18px;
-    transform:translateX(-50%);
-    background:rgba(0,0,0,0.82);
-    border:1px solid var(--hair);
-    padding:10px 12px;
-    border-radius:12px;
-    display:none;
-    z-index:60;
-  }
+    .toast{
+      position:fixed;
+      left:50%;
+      bottom:18px;
+      transform:translateX(-50%);
+      background:rgba(0,0,0,0.82);
+      border:1px solid var(--hair);
+      padding:10px 12px;
+      border-radius:12px;
+      display:none;
+      z-index:60;
+    }
 
-  /* payment modal (index-specific) */
-  .modal-backdrop{
-    position:fixed;
-    inset:0;
-    background:rgba(0,0,0,0.62);
-    display:none;
-    align-items:center;
-    justify-content:center;
-    z-index:55;
-    padding:18px;
-  }
+    /* payment modal (index-specific) */
+    .modal-backdrop{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,0.62);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index:55;
+      padding:18px;
+    }
 
-  .modal{
-    width:min(560px,100%);
-    border:1px solid var(--hair);
-    background:linear-gradient(180deg,var(--panel),var(--panel2));
-    border-radius:18px;
-    box-shadow:0 18px 50px rgba(0,0,0,0.55);
-    padding:16px;
-  }
+    .modal{
+      width:min(560px,100%);
+      border:1px solid var(--hair);
+      background:linear-gradient(180deg,var(--panel),var(--panel2));
+      border-radius:18px;
+      box-shadow:0 18px 50px rgba(0,0,0,0.55);
+      padding:16px;
+    }
 
-  .modal h2{margin:0 0 10px;font-size:20px}
-  .modal .muted{color:var(--muted);font-size:14px;margin:0 0 12px}
-  .modal .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
-  .modal .grid .cell{display:flex;flex-direction:column;gap:6px}
+    .modal h2{margin:0 0 10px;font-size:20px}
+    .modal .muted{color:var(--muted);font-size:14px;margin:0 0 12px}
+    .modal .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+    .modal .grid .cell{display:flex;flex-direction:column;gap:6px}
 
-  .modal input,.modal select{
-    padding:10px 12px;
-    border-radius:14px;
-    border:1px solid var(--hair);
-    background:rgba(255,255,255,0.03);
-    color:var(--text);
-    font:inherit;
-    font-size:16px;
-    outline:none;
-  }
+    .modal input,.modal select{
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid var(--hair);
+      background:rgba(255,255,255,0.03);
+      color:var(--text);
+      font:inherit;
+      font-size:16px;
+      outline:none;
+    }
 
-  .modal select option{background:#161616;color:#ffffff;}
+    .modal select option{background:#161616;color:#ffffff;}
 
-  .modal .summary{
-    border:1px solid var(--hair);
-    background:rgba(255,255,255,0.03);
-    border-radius:14px;
-    padding:10px 12px;
-    display:flex;
-    flex-direction:column;
-    gap:6px;
-    margin:10px 0 12px;
-  }
+    .modal .summary{
+      border:1px solid var(--hair);
+      background:rgba(255,255,255,0.03);
+      border-radius:14px;
+      padding:10px 12px;
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      margin:10px 0 12px;
+    }
 
-  .modal .summary .line{display:flex;justify-content:space-between;gap:10px;color:var(--muted);font-size:14px}
-  .modal .summary .line strong{color:var(--text);font-weight:700}
-  .modal .actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:10px}
+    .modal .summary .line{display:flex;justify-content:space-between;gap:10px;color:var(--muted);font-size:14px}
+    .modal .summary .line strong{color:var(--text);font-weight:700}
+    .modal .actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:10px}
 
-  .fineprint{margin:10px 0 0;color:var(--muted);font-size:12px;line-height:1.35}
-</style>
+    .fineprint{margin:10px 0 0;color:var(--muted);font-size:12px;line-height:1.35}
+  </style>
   <script src="./assets/app.js"></script>
 </head>
 <body>
@@ -355,7 +355,13 @@
   </div>
 
   <script>
-    // Leaderboard feed: uses window.NUNC as the single source of truth.
+  (() => {
+    'use strict';
+
+    if (!window.NUNC) {
+      console.error('NUNC runtime missing: include ./assets/app.js before this script.');
+      return;
+    }
 
     const FEED = document.getElementById('feed');
     const SENTINEL = document.getElementById('sentinel');
@@ -369,7 +375,7 @@
       setTimeout(() => TOAST.style.display = 'none', 1800);
     };
 
-    // ---------- Payment modal + FX ----------
+    // ---------- Payment modal + FX (UI-only; not ledger logic) ----------
     const payBackdrop = document.getElementById('payBackdrop');
     const payAmount   = document.getElementById('payAmount');
     const payCurrency = document.getElementById('payCurrency');
@@ -462,6 +468,7 @@
       if(add < 1) return toastMsg('Payment blocked: must equal at least 1 boost (>= $1).');
       if(!pendingBoostPostId) return toastMsg('Boost failed: missing post id.');
 
+      // Single ledger call
       const out = window.NUNC.addBoosts(pendingBoostPostId, add);
       if(!out || !out.ok) return toastMsg('Boost failed.');
 
@@ -472,7 +479,16 @@
 
     confirmPay.addEventListener('click', finalizeBoost);
 
-    // ---------- Rendering ----------
+    // ---------- Feed rendering (calls only into NUNC) ----------
+    function setLoading(isLoading){
+      if(isLoading) STATUS.classList.add('loading');
+      else STATUS.classList.remove('loading');
+    }
+
+    function updateStatus(n){
+      STATUS_TEXT.textContent = `Loaded ${n} posts`;
+    }
+
     function setMetaBoostCount(metaEl, n){
       let span = metaEl.querySelector('[data-boost-count]');
       if(!span){
@@ -505,8 +521,6 @@
       const meta = document.createElement('div');
       meta.className = 'meta';
       meta.innerHTML = `${country} <span class="dot"></span> ${timeLabel}`;
-
-      // Always show boosts (includes initial paid boosts)
       setMetaBoostCount(meta, Number(boosts || 0));
 
       content.appendChild(titleEl);
@@ -529,30 +543,22 @@
       return row;
     }
 
-    function setLoading(isLoading){
-      if(isLoading) STATUS.classList.add('loading');
-      else STATUS.classList.remove('loading');
-    }
-
     let allPosts = [];
     let cursor = 0;
     let loaded = 0;
     const BATCH = 12;
 
-    function updateStatus(){
-      STATUS_TEXT.textContent = `Loaded ${loaded} posts`;
-    }
-
     function rebuildDataset(){
       const ledger = window.NUNC.getLedger();
-      allPosts = window.NUNC.sortLeaderboardPosts((ledger.posts || []).filter(p => p && p.id && p.text));
+      allPosts = window.NUNC
+        .sortLeaderboardPosts((ledger.posts || []).filter(p => p && p.id && p.text));
       cursor = 0;
     }
 
     function renderEmptyState(){
       FEED.innerHTML = '';
       loaded = 0;
-      updateStatus();
+      updateStatus(loaded);
       const row = document.createElement('div');
       row.className = 'post';
       row.innerHTML = `
@@ -588,7 +594,7 @@
         }
 
         FEED.appendChild(frag);
-        updateStatus();
+        updateStatus(loaded);
         setLoading(false);
       }, 120);
     }
@@ -610,16 +616,15 @@
 
     const io = new IntersectionObserver((entries) => {
       for(const e of entries){
-        if(e.isIntersecting){
-          appendBatch();
-        }
+        if(e.isIntersecting) appendBatch();
       }
     }, { root:null, rootMargin:'600px 0px', threshold:0 });
 
     io.observe(SENTINEL);
 
-    // Live updates across tabs + same tab
+    // Only subscription point: NUNC handles cross-tab + storage + polling
     window.NUNC.watchLedger(() => renderFresh(), { pollMs: 700 });
+  })();
   </script>
 </body>
 </html>
