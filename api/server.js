@@ -1,104 +1,123 @@
+// server.js (Node + Express API for nunc)
+// Stateless demo API: posts + boosts shared across devices.
+// Storage: in-memory (resets on redeploy/sleep). Swap to Postgres later.
+
 import express from "express";
 import cors from "cors";
-import { getDb } from "./db.js";
 
 const app = express();
-const PORT = process.env.PORT || 8787;
+app.use(express.json({ limit: "64kb" }));
 
-app.use(cors({ origin: true }));
-app.use(express.json({ limit: "50kb" }));
+// CORS: allow GitHub Pages + local dev. Tighten later.
+app.use(
+  cors({
+    origin: true,
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["Content-Type"],
+  })
+);
 
-function clampPostBody(s) {
-  const body = (s ?? "").toString().trim();
-  if (!body) return null;
-  if (body.length > 200) return body.slice(0, 200);
-  return body;
+const ONE_DAY_MS = 86400000;
+const now = () => Date.now();
+const hasUrl = (s) => /(https?:\/\/|www\.|\.[a-z]{2,})(\/|$)/i.test(String(s || ""));
+const genId = () => Math.random().toString(36).slice(2) + now().toString(36);
+
+// ---- In-memory store ----
+// posts: Map<id, {id,text,country,createdAt,expiresAt}>
+// boosts: Map<id, number>
+const posts = new Map();
+const boosts = new Map();
+
+function pruneExpired() {
+  const t = now();
+  for (const [id, p] of posts.entries()) {
+    if (Number(p.expiresAt || 0) <= t) {
+      posts.delete(id);
+      boosts.delete(id);
+    }
+  }
 }
 
-app.get("/health", (req, res) => res.json({ ok: true }));
+function serializePost(p) {
+  const b = Number(boosts.get(p.id) ?? 0);
+  return { ...p, boosts: b };
+}
 
-// Create post
-app.post("/posts", async (req, res) => {
-  try {
-    const db = await getDb();
-    const body = clampPostBody(req.body?.body);
-    const country = (req.body?.country ?? "Unknown").toString().trim() || "Unknown";
+function sortedFeed() {
+  pruneExpired();
+  const arr = [];
+  for (const p of posts.values()) arr.push(serializePost(p));
+  arr.sort((a, b) => {
+    const ba = Number(a.boosts || 0);
+    const bb = Number(b.boosts || 0);
+    if (bb !== ba) return bb - ba;
+    const ta = Number(a.createdAt || 0);
+    const tb = Number(b.createdAt || 0);
+    if (tb !== ta) return tb - ta;
+    return String(a.id).localeCompare(String(b.id));
+  });
+  return arr;
+}
 
-    if (!body) return res.status(400).json({ error: "Post body required" });
+// ---- Routes ----
 
-    const createdAt = Date.now();
-    const result = await db.run(
-      "INSERT INTO posts (body, country, boosts, created_at) VALUES (?, ?, 0, ?)",
-      [body, country, createdAt]
-    );
-
-    const post = await db.get("SELECT * FROM posts WHERE id = ?", [result.lastID]);
-    res.json({ post });
-  } catch (e) {
-    res.status(500).json({ error: "Server error" });
-  }
+app.get("/", (_req, res) => {
+  res.type("text").send("nunc api ok");
 });
 
-// Latest feed
-app.get("/posts", async (req, res) => {
-  try {
-    const db = await getDb();
-    const limit = Math.max(1, Math.min(50, Number(req.query.limit ?? 20)));
-    const rows = await db.all(
-      "SELECT * FROM posts ORDER BY created_at DESC LIMIT ?",
-      [limit]
-    );
-    res.json({ posts: rows });
-  } catch (e) {
-    res.status(500).json({ error: "Server error" });
-  }
+// Optional health endpoint (only set Render health check if you keep this)
+app.get("/healthz", (_req, res) => {
+  res.json({ ok: true, t: now() });
 });
 
-// Leaderboard
-app.get("/leaderboard", async (req, res) => {
-  try {
-    const db = await getDb();
-    const limit = Math.max(1, Math.min(100, Number(req.query.limit ?? 50)));
-    const rows = await db.all(
-      "SELECT * FROM posts ORDER BY boosts DESC, created_at DESC LIMIT ?",
-      [limit]
-    );
-    res.json({ posts: rows });
-  } catch (e) {
-    res.status(500).json({ error: "Server error" });
-  }
+// Get ranked posts
+app.get("/api/posts", (_req, res) => {
+  const feed = sortedFeed();
+  res.json({ posts: feed });
 });
 
-// Boost (atomic)
-app.post("/posts/:id/boost", async (req, res) => {
-  try {
-    const db = await getDb();
-    const id = Number(req.params.id);
-    const amount = Math.max(1, Math.min(9999, Number(req.body?.amount ?? 1)));
+// Create a post
+// body: { text, country, boosts }
+app.post("/api/posts", (req, res) => {
+  pruneExpired();
 
-    if (!Number.isFinite(id)) return res.status(400).json({ error: "Bad id" });
+  const text = String(req.body?.text ?? "").trim().slice(0, 200);
+  const country = String(req.body?.country ?? "—").trim().slice(0, 80) || "—";
+  const initialBoosts = Math.max(0, Math.floor(Number(req.body?.boosts ?? 0)));
 
-    await db.run("BEGIN IMMEDIATE TRANSACTION");
-    const found = await db.get("SELECT id, boosts FROM posts WHERE id = ?", [id]);
-    if (!found) {
-      await db.run("ROLLBACK");
-      return res.status(404).json({ error: "Not found" });
-    }
+  if (!text) return res.status(400).json({ error: "empty" });
+  if (hasUrl(text)) return res.status(400).json({ error: "url_blocked" });
 
-    await db.run("UPDATE posts SET boosts = boosts + ? WHERE id = ?", [amount, id]);
-    const post = await db.get("SELECT * FROM posts WHERE id = ?", [id]);
-    await db.run("COMMIT");
+  const createdAt = now();
+  const expiresAt = createdAt + ONE_DAY_MS;
+  const id = genId();
 
-    res.json({ post });
-  } catch (e) {
-    try {
-      const db = await getDb();
-      await db.run("ROLLBACK");
-    } catch {}
-    res.status(500).json({ error: "Server error" });
-  }
+  const post = { id, text, country, createdAt, expiresAt };
+  posts.set(id, post);
+  boosts.set(id, initialBoosts);
+
+  res.json({ post: serializePost(post) });
 });
 
+// Boost a post
+// body: { add }
+app.post("/api/posts/:id/boost", (req, res) => {
+  pruneExpired();
+
+  const id = String(req.params.id || "").trim();
+  if (!id || !posts.has(id)) return res.status(404).json({ error: "not_found" });
+
+  const add = Math.max(1, Math.floor(Number(req.body?.add ?? 0)));
+  const prev = Number(boosts.get(id) ?? 0);
+  const next = prev + add;
+  boosts.set(id, next);
+
+  res.json({ ok: true, boosts: next });
+});
+
+// ---- Start ----
+const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
 app.listen(PORT, () => {
-  console.log(`API listening on http://localhost:${PORT}`);
+  // Render expects you to bind to process.env.PORT
+  console.log("nunc api listening on", PORT);
 });
