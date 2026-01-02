@@ -30,249 +30,379 @@
       letter-spacing:0.1px;
     }
 
-    .shell-sub{
-      font-size:13px;
-      color:var(--muted);
-      letter-spacing:0.6px;
-      text-transform:uppercase;
-      white-space:nowrap;
-    }
-
     .tools{
       padding:14px 18px;
       border-bottom:1px solid var(--hair);
-      background:linear-gradient(to bottom, rgba(0,0,0,0.08), rgba(0,0,0,0));
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+
+    .search{
+      flex:1 1 260px;
+      display:flex;
+      gap:10px;
+      align-items:center;
+      min-width:240px;
+    }
+
+    .search input{
+      width:100%;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid var(--hair);
+      background:rgba(255,255,255,0.03);
+      color:var(--text);
+      font:inherit;
+      outline:none;
+    }
+
+    .btn-sm{
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid var(--hair);
+      background:rgba(255,255,255,0.03);
+      color:var(--text);
+      font:inherit;
+      cursor:pointer;
+    }
+
+    .btn-sm:hover{background:var(--pill);}
+
+    .grid{
+      display:grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap:12px;
+      padding:14px 18px 18px;
+    }
+
+    @media (max-width: 980px){
+      .grid{grid-template-columns: repeat(2, minmax(0, 1fr));}
+    }
+    @media (max-width: 560px){
+      .grid{grid-template-columns: 1fr;}
+      .shell-header{padding:16px 14px 12px;}
+      .tools{padding:12px 14px;}
+      .grid{padding:12px 14px 14px;}
+    }
+
+    .card{
+      border:1px solid var(--hair);
+      background:linear-gradient(180deg,var(--panel),var(--panel2));
+      border-radius:16px;
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+      min-height:120px;
+    }
+
+    .card-top{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      padding:12px 12px 10px;
+      border-bottom:1px solid var(--hair);
+      align-items:center;
+    }
+
+    .country{
+      font-weight:700;
+      letter-spacing:0.2px;
+    }
+
+    .score{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      color:var(--muted);
+      font-size:13px;
+      white-space:nowrap;
+    }
+
+    .score strong{color:var(--text);}
+
+    .card-body{
+      padding:12px;
       display:flex;
       flex-direction:column;
       gap:10px;
     }
 
-    .searchRow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
-
-    .search{
-      flex:1;
-      min-width:260px;
-      display:flex;
-      align-items:center;
-      gap:10px;
-      padding:10px 12px;
+    .bar{
+      height:10px;
+      border-radius:999px;
       border:1px solid var(--hair);
-      border-radius:14px;
       background:rgba(255,255,255,0.03);
+      overflow:hidden;
     }
 
-    .searchIcon{color:var(--muted);font-size:16px;line-height:1;user-select:none;}
-
-    input[type="text"]{
-      width:100%;
-      border:0;
-      outline:none;
-      background:transparent;
-      color:var(--text);
-      font-size:16px;
-      font-family:inherit;
-      letter-spacing:0.2px;
+    .bar > div{
+      height:100%;
+      width:0%;
+      background:var(--goldBg);
     }
 
-    input::placeholder{color:rgba(255,255,255,0.45)}
-
-    .hint{font-size:13px;color:var(--muted);line-height:1.35;}
-
-    .results{display:flex;flex-direction:column}
-
-    .row{
-      display:grid;
-      grid-template-columns: 1fr 120px;
-      gap:14px;
-      padding:14px 18px;
-      border-bottom:1px solid var(--hair);
-      align-items:center;
-    }
-
-    .row:last-child{border-bottom:none}
-
-    .country{
-      font-size:18px;
-      font-weight:600;
-      line-height:1.2;
-      word-wrap:break-word;
-      overflow-wrap:anywhere;
-    }
-
-    .meta{
-      font-size:13px;
+    .mini{
+      font-size:12px;
       color:var(--muted);
       display:flex;
-      gap:8px;
+      justify-content:space-between;
+      gap:10px;
       flex-wrap:wrap;
-      align-items:center;
-      margin-top:6px;
     }
 
-    .go{
-      justify-self:end;
-      padding:9px 12px;
+    .toast{
+      position:fixed;
+      left:50%;
+      bottom:18px;
+      transform:translateX(-50%);
+      background:rgba(0,0,0,0.82);
       border:1px solid var(--hair);
+      padding:10px 12px;
       border-radius:12px;
-      background:transparent;
-      color:var(--muted);
-      font-family:inherit;
-      font-size:14px;
-      cursor:pointer;
-      user-select:none;
+      display:none;
+      z-index:60;
     }
 
-    .go:hover{color:var(--text);background:var(--pill)}
+    .statusline{
+      padding:12px 18px;
+      border-top:1px solid var(--hair);
+      color:var(--muted);
+      font-size:13px;
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:space-between;
+    }
 
-    .empty{padding:18px;color:var(--muted);font-size:13px}
+    .spinner{
+      width:14px;
+      height:14px;
+      border-radius:999px;
+      border:2px solid var(--hair);
+      border-top-color:rgba(255,255,255,0.55);
+      animation:spin 0.8s linear infinite;
+      display:none;
+    }
+    .loading .spinner{display:inline-block}
+    @keyframes spin{to{transform:rotate(360deg)}}
   </style>
   <script src="./assets/app.js"></script>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <div class="nav">
-      <div class="brand"><a class="logo" href="index.html">nunc</a></div>
-      <div class="nav-actions">
-        <a class="pill" href="index.html">leaderboard</a>
-        <a class="pill" href="explore.html">explore</a>
-        <a class="pill" href="post.html">post</a>
-        <a class="pill" href="login.html">log in</a>
-      </div>
-    </div>
-  </header>
-
-  <main>
-    <section class="shell">
-      <div class="shell-header">
-        <h2 class="shell-title">Most boosted nation</h2>
-        <div class="shell-sub">Ranked by total boosts</div>
-      </div>
-
-      <div class="tools">
-        <div class="searchRow">
-          <div class="search">
-            <div class="searchIcon">⌕</div>
-            <input id="q" type="text" placeholder="Search countries" />
-          </div>
+  <div class="wrap">
+    <header>
+      <div class="nav">
+        <div class="brand">
+          <a class="logo" href="./index.html">nunc</a>
         </div>
-        <div class="hint">Ranking uses the shared ledger in <code>assets/app.js</code>.</div>
+        <div class="nav-actions">
+          <a class="pill" href="./index.html">leaderboard</a>
+          <a class="pill" href="./explore.html">explore</a>
+          <a class="pill" href="./post.html">post</a>
+          <a class="pill" href="./login.html">log in</a>
+        </div>
       </div>
+    </header>
 
-      <div id="results" class="results"></div>
-      <div id="empty" class="empty" style="display:none">No matches.</div>
-    </section>
-  </main>
+    <main>
+      <section class="shell" aria-label="Explore">
+        <div class="shell-header">
+          <h2 class="shell-title">Explore</h2>
+        </div>
 
-  <footer>
-    <div class="foot">
-      <div>© nunc</div>
-      <div>terms · transparency · ledger</div>
-    </div>
-  </footer>
-</div>
+        <div class="tools">
+          <div class="search">
+            <input id="q" placeholder="Search country…" autocomplete="off" />
+          </div>
+          <button class="btn-sm" id="clearBtn" type="button">Clear</button>
+          <button class="btn-sm" id="randomBtn" type="button">Random</button>
+        </div>
 
-<script>
-(() => {
-  'use strict';
+        <div id="grid" class="grid"></div>
 
-  if (!window.NUNC) {
-    console.error('NUNC runtime missing: include ./assets/app.js before this script.');
-    return;
-  }
+        <div class="statusline" id="statusLine">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="spinner" aria-hidden="true"></span>
+            <span id="statusText">Loaded</span>
+          </div>
+          <span id="statusMeta">—</span>
+        </div>
+      </section>
+    </main>
 
-  const Q = document.getElementById('q');
-  const RESULTS = document.getElementById('results');
-  const EMPTY = document.getElementById('empty');
+    <footer>
+      <div class="foot">
+        <div>© nunc</div>
+        <div>terms · transparency · ledger</div>
+      </div>
+    </footer>
+  </div>
 
-  let order = [];
-  let rankMap = Object.create(null);
-  let totals = Object.create(null);
+  <div class="toast" id="toast"></div>
 
-  const rebuildRankMap = () => {
-    rankMap = Object.create(null);
-    for (let i = 0; i < order.length; i++) rankMap[order[i]] = i + 1;
-  };
+  <script>
+  (() => {
+    'use strict';
 
-  const recompute = () => {
-    const ledger = NUNC.getLedger();              // { posts, boosts }
-    totals = NUNC.totalsByCountry(ledger.posts);  // { country: totalBoosts }
-    order = NUNC.sortCountriesByTotals(totals);   // [countries...]
-    rebuildRankMap();
-  };
-
-  const render = (list) => {
-    RESULTS.innerHTML = '';
-    if (!list.length) {
-      EMPTY.style.display = 'block';
+    if (!window.NUNC) {
+      console.error('NUNC runtime missing: include ./assets/app.js before this script.');
       return;
     }
-    EMPTY.style.display = 'none';
 
-    const frag = document.createDocumentFragment();
+    const Q = document.getElementById('q');
+    const GRID = document.getElementById('grid');
+    const CLEAR = document.getElementById('clearBtn');
+    const RANDOM = document.getElementById('randomBtn');
+    const TOAST = document.getElementById('toast');
+    const STATUSLINE = document.getElementById('statusLine');
+    const STATUS_TEXT = document.getElementById('statusText');
+    const STATUS_META = document.getElementById('statusMeta');
 
-    for (const c of list) {
-      const row = document.createElement('div');
-      row.className = 'row';
+    const toastMsg = (m) => {
+      TOAST.textContent = m;
+      TOAST.style.display = 'block';
+      setTimeout(() => TOAST.style.display = 'none', 1600);
+    };
 
-      const left = document.createElement('div');
+    const setLoading = (on) => {
+      if (on) STATUSLINE.classList.add('loading');
+      else STATUSLINE.classList.remove('loading');
+    };
 
-      const title = document.createElement('div');
-      title.className = 'country';
-      title.textContent = `#${rankMap[c] || '—'} — ${c}`;
+    const norm = (s) => String(s || '').trim().toLowerCase();
+    const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
 
-      const meta = document.createElement('div');
-      meta.className = 'meta';
-      const total = Number(totals[c] || 0);
-      meta.innerHTML = `<span>${total} boosts</span>`;
+    let lastLedgerPosts = [];
+    let lastTotals = null;
+    let lastSortedCountries = [];
 
-      left.appendChild(title);
-      left.appendChild(meta);
+    function card(country, total, maxTotal){
+      const el = document.createElement('div');
+      el.className = 'card';
 
-      const go = document.createElement('button');
-      go.className = 'go';
-      go.type = 'button';
-      go.textContent = 'view';
-      go.addEventListener('click', (e) => {
-        e.stopPropagation();
-        location.href = `index.html?country=${encodeURIComponent(c)}`;
-      });
+      const top = document.createElement('div');
+      top.className = 'card-top';
 
-      row.appendChild(left);
-      row.appendChild(go);
+      const c = document.createElement('div');
+      c.className = 'country';
+      c.textContent = country;
 
-      row.addEventListener('click', () => {
-        location.href = `index.html?country=${encodeURIComponent(c)}`;
-      });
+      const s = document.createElement('div');
+      s.className = 'score';
+      s.innerHTML = `<span>boosts</span> <strong>${Number(total || 0)}</strong>`;
 
-      frag.appendChild(row);
+      top.appendChild(c);
+      top.appendChild(s);
+
+      const body = document.createElement('div');
+      body.className = 'card-body';
+
+      const bar = document.createElement('div');
+      bar.className = 'bar';
+      const fill = document.createElement('div');
+      const pct = maxTotal > 0 ? clamp((Number(total || 0) / maxTotal) * 100, 0, 100) : 0;
+      fill.style.width = pct.toFixed(1) + '%';
+      bar.appendChild(fill);
+
+      const mini = document.createElement('div');
+      mini.className = 'mini';
+
+      const postsCount = lastLedgerPosts.filter(p => String(p.country || '').trim() === country).length;
+      mini.innerHTML = `<span>${postsCount} posts</span><span>${pct.toFixed(1)}%</span>`;
+
+      body.appendChild(bar);
+      body.appendChild(mini);
+
+      el.appendChild(top);
+      el.appendChild(body);
+
+      return el;
     }
 
-    RESULTS.appendChild(frag);
-  };
+    function render(filterText){
+      const ft = norm(filterText);
+      const list = ft
+        ? lastSortedCountries.filter(c => norm(c).includes(ft))
+        : lastSortedCountries;
 
-  const filter = () => {
-    const q = (Q.value || '').trim().toLowerCase();
-    if (!q) {
-      render(order);
-      return;
+      GRID.innerHTML = '';
+
+      if (!list.length) {
+        const empty = document.createElement('div');
+        empty.className = 'card';
+        empty.innerHTML = `
+          <div class="card-top"><div class="country">No results</div><div class="score"><span>—</span></div></div>
+          <div class="card-body"><div class="mini">Try a different search.</div></div>
+        `;
+        GRID.appendChild(empty);
+        STATUS_META.textContent = '0 countries';
+        return;
+      }
+
+      const totals = lastTotals || window.NUNC.totalsByCountry(lastLedgerPosts);
+      const maxTotal = Math.max(0, ...Object.values(totals).map(v => Number(v || 0)));
+
+      const frag = document.createDocumentFragment();
+      for (const c of list) {
+        frag.appendChild(card(c, totals[c] || 0, maxTotal));
+      }
+      GRID.appendChild(frag);
+
+      STATUS_META.textContent = `${list.length} countries`;
     }
-    render(order.filter(c => c.toLowerCase().includes(q)));
-  };
 
-  const applyAndRender = () => {
-    recompute();
-    filter();
-  };
+    async function refresh(authoritative){
+      setLoading(true);
+      try{
+        // Fast paint from cache if desired
+        if (!authoritative) {
+          try{
+            const cached = await window.NUNC.getLedger({ preferCache: true });
+            lastLedgerPosts = cached.posts || [];
+            lastTotals = window.NUNC.totalsByCountry(lastLedgerPosts);
+            lastSortedCountries = window.NUNC.sortCountriesByTotals(lastTotals);
+            render(Q.value);
+          }catch(_){}
+        }
 
-  Q.addEventListener('input', filter);
+        // Authoritative API fetch
+        const ledger = await window.NUNC.getLedger();
+        lastLedgerPosts = ledger.posts || [];
+        lastTotals = window.NUNC.totalsByCountry(lastLedgerPosts);
+        lastSortedCountries = window.NUNC.sortCountriesByTotals(lastTotals);
 
-  // Single subscription point: all cross-tab + storage + polling is inside NUNC.watchLedger()
-  NUNC.watchLedger(() => applyAndRender());
+        STATUS_TEXT.textContent = `Loaded ${lastLedgerPosts.length} posts`;
+        render(Q.value);
+      }catch(_){
+        toastMsg('Load failed (API unreachable).');
+      }finally{
+        setLoading(false);
+      }
+    }
 
-  // Initial render
-  applyAndRender();
-})();
-</script>
+    // Search + buttons
+    Q.addEventListener('input', () => render(Q.value));
+    CLEAR.addEventListener('click', () => { Q.value=''; render(''); });
+    RANDOM.addEventListener('click', () => {
+      const c = window.NUNC.rand(window.NUNC.COUNTRIES);
+      Q.value = c;
+      render(Q.value);
+    });
+
+    // Initial: cache -> API
+    refresh(false);
+
+    // Debounced refresh on ledger events
+    let t = null;
+    const scheduleRefresh = () => {
+      clearTimeout(t);
+      t = setTimeout(() => refresh(true), 180);
+    };
+
+    window.NUNC.watchLedger(() => scheduleRefresh(), { pollMs: 1100 });
+  })();
+  </script>
 </body>
 </html>
