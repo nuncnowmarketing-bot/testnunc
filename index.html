@@ -286,7 +286,7 @@
   <div class="modal-backdrop" id="payBackdrop" aria-hidden="true">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="payTitle">
       <h2 id="payTitle">Pay to boost</h2>
-      <p class="muted">1 USD = 1 boost. Foreign currencies convert to USD at live FX rates.</p>
+      <p class="muted">1 USD = 1 boost. Foreign currencies convert to USD at fixed demo FX rates.</p>
 
       <div class="grid">
         <div class="cell">
@@ -375,7 +375,7 @@
       setTimeout(() => TOAST.style.display = 'none', 1800);
     };
 
-    // ---------- Payment modal + FX (UI-only; not ledger logic) ----------
+    // ---------- Payment modal + FX (UI-only; deterministic demo rates) ----------
     const payBackdrop = document.getElementById('payBackdrop');
     const payAmount   = document.getElementById('payAmount');
     const payCurrency = document.getElementById('payCurrency');
@@ -385,31 +385,67 @@
     const cancelPay   = document.getElementById('cancelPay');
     const confirmPay  = document.getElementById('confirmPay');
 
+    // Demo FX rates: 1 unit of currency -> USD
+    // Adjust whenever you want; correctness is "stable demo", not real-time.
+    const FX_TO_USD = Object.freeze({
+      USD: 1,
+      EUR: 1.09,
+      GBP: 1.27,
+      CAD: 0.74,
+      AUD: 0.67,
+      NZD: 0.62,
+      JPY: 0.0068,
+      CNY: 0.14,
+      KRW: 0.00076,
+      INR: 0.012,
+      CHF: 1.12,
+      SEK: 0.096,
+      NOK: 0.094,
+      DKK: 0.15,
+      PLN: 0.25,
+      CZK: 0.043,
+      HUF: 0.0029,
+      RON: 0.22,
+      BGN: 0.56,
+      TRY: 0.03,
+      ILS: 0.27,
+      AED: 0.27,
+      SAR: 0.27,
+      BRL: 0.20,
+      MXN: 0.058,
+      CLP: 0.0011,
+      COP: 0.00025,
+      PEN: 0.27,
+      ZAR: 0.055,
+      NGN: 0.00066,
+      EGP: 0.021,
+      KES: 0.0067,
+      SGD: 0.74,
+      HKD: 0.13,
+      TWD: 0.031,
+      THB: 0.028,
+      MYR: 0.21,
+      IDR: 0.000064,
+      PHP: 0.018
+    });
+
     const parseAmount = (v)=>{
       const n = Number(String(v).replace(',','.').trim());
       return Number.isFinite(n) ? n : NaN;
     };
 
-    async function convertToUSD(amount, currency){
-      if(currency === 'USD') return { usd: amount, source: 'USD (no conversion)' };
-      const url = 'https://api.frankfurter.app/latest?amount=' + encodeURIComponent(amount) +
-                  '&from=' + encodeURIComponent(currency) + '&to=USD';
-      try{
-        const res = await fetch(url, { cache:'no-store' });
-        if(!res.ok) throw new Error('fx_http_'+res.status);
-        const data = await res.json();
-        const usd = data && data.rates && typeof data.rates.USD === 'number' ? data.rates.USD : NaN;
-        if(!Number.isFinite(usd)) throw new Error('fx_parse');
-        return { usd, source: 'Frankfurter (ECB)' };
-      }catch(_){
-        return { usd: amount, source: 'FX unavailable (1:1 fallback)' };
-      }
+    function convertToUSD(amount, currency){
+      const rate = FX_TO_USD[currency];
+      if (!Number.isFinite(rate)) return { usd: amount, source: 'FX missing (1:1 fallback)' };
+      const usd = amount * rate;
+      const source = (currency === 'USD') ? 'USD (no conversion)' : 'Fixed demo FX table';
+      return { usd, source };
     }
 
     let conversionTimer = null;
     const computeConversion = ()=>{
       clearTimeout(conversionTimer);
-      conversionTimer = setTimeout(async ()=>{
+      conversionTimer = setTimeout(() => {
         const amt = parseAmount(payAmount.value);
         const cur = payCurrency.value;
 
@@ -420,17 +456,13 @@
           return;
         }
 
-        fxSource.textContent='Converting…';
-        usdOut.textContent='…';
-        boostOut.textContent='…';
-
-        const r = await convertToUSD(amt, cur);
+        const r = convertToUSD(amt, cur);
         const boosts = Math.max(0, Math.floor(r.usd));
 
         fxSource.textContent = r.source;
         usdOut.textContent = r.usd.toFixed(2) + ' USD';
         boostOut.textContent = boosts + ' boosts';
-      }, 120);
+      }, 80);
     };
 
     payAmount.addEventListener('input', computeConversion);
@@ -463,23 +495,25 @@
       const cur = payCurrency.value;
       if(!Number.isFinite(amt) || amt <= 0) return toastMsg('Payment blocked: invalid amount.');
 
-      const r = await convertToUSD(amt, cur);
+      const r = convertToUSD(amt, cur);
       const add = Math.max(0, Math.floor(r.usd));
       if(add < 1) return toastMsg('Payment blocked: must equal at least 1 boost (>= $1).');
       if(!pendingBoostPostId) return toastMsg('Boost failed: missing post id.');
 
-      // Single ledger call
-      const out = window.NUNC.addBoosts(pendingBoostPostId, add);
-      if(!out || !out.ok) return toastMsg('Boost failed.');
+      try{
+        await window.NUNC.addBoosts(pendingBoostPostId, add);
+      }catch(_){
+        return toastMsg('Boost failed.');
+      }
 
       closePay();
-      toastMsg('Boosted +'+add+'.');
-      renderFresh();
+      toastMsg('Boosted +' + add + '.');
+      await renderFresh(true);
     }
 
     confirmPay.addEventListener('click', finalizeBoost);
 
-    // ---------- Feed rendering (calls only into NUNC) ----------
+    // ---------- Feed rendering (backend-first) ----------
     function setLoading(isLoading){
       if(isLoading) STATUS.classList.add('loading');
       else STATUS.classList.remove('loading');
@@ -548,10 +582,19 @@
     let loaded = 0;
     const BATCH = 12;
 
-    function rebuildDataset(){
-      const ledger = window.NUNC.getLedger();
-      allPosts = window.NUNC
-        .sortLeaderboardPosts((ledger.posts || []).filter(p => p && p.id && p.text));
+    async function rebuildDataset(authoritative){
+      // 1) paint cached immediately for speed (optional)
+      if(!authoritative){
+        try{
+          const cached = await window.NUNC.getLedger({ preferCache: true });
+          allPosts = window.NUNC.sortLeaderboardPosts((cached.posts || []).filter(p => p && p.id && p.text));
+          cursor = 0;
+        }catch(_){}
+      }
+
+      // 2) authoritative fetch from API
+      const ledger = await window.NUNC.getLedger();
+      allPosts = window.NUNC.sortLeaderboardPosts((ledger.posts || []).filter(p => p && p.id && p.text));
       cursor = 0;
     }
 
@@ -596,23 +639,40 @@
         FEED.appendChild(frag);
         updateStatus(loaded);
         setLoading(false);
-      }, 120);
+      }, 80);
     }
 
-    function renderFresh(){
-      FEED.innerHTML = '';
-      loaded = 0;
-      rebuildDataset();
+    let inFlight = false;
+    async function renderFresh(authoritative){
+      if(inFlight) return;
+      inFlight = true;
+      setLoading(true);
 
-      if(allPosts.length === 0){
+      try{
+        FEED.innerHTML = '';
+        loaded = 0;
+        updateStatus(0);
+
+        await rebuildDataset(!!authoritative);
+
+        if(allPosts.length === 0){
+          renderEmptyState();
+        }else{
+          appendBatch();
+        }
+      }catch(_){
         renderEmptyState();
-        return;
+        toastMsg('Load failed (API unreachable).');
+      }finally{
+        setLoading(false);
+        inFlight = false;
       }
-
-      appendBatch();
     }
 
-    renderFresh();
+    // Initial: show cache fast, then authoritative
+    (async () => {
+      await renderFresh(false);
+    })();
 
     const io = new IntersectionObserver((entries) => {
       for(const e of entries){
@@ -622,8 +682,14 @@
 
     io.observe(SENTINEL);
 
-    // Only subscription point: NUNC handles cross-tab + storage + polling
-    window.NUNC.watchLedger(() => renderFresh(), { pollMs: 700 });
+    // Debounced refresh to avoid hammering API on frequent events
+    let refreshTimer = null;
+    const scheduleRefresh = () => {
+      clearTimeout(refreshTimer);
+      refreshTimer = setTimeout(() => renderFresh(true), 180);
+    };
+
+    window.NUNC.watchLedger(() => scheduleRefresh(), { pollMs: 900 });
   })();
   </script>
 </body>
