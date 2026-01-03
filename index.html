@@ -689,8 +689,12 @@
       refreshTimer = setTimeout(() => renderFresh(true), 180);
     };
 
-    window.NUNC.watchLedger(() => scheduleRefresh(), { pollMs: 900 });
-  })();
+    window.NUNC.watchLedger((e) => {
+  const d = e?.detail || e || {};
+  const op = d?.op;
+  if (op === 'ledger_refresh') return; // ignore reads; only react to mutations
+  scheduleRefresh();
+}, { pollMs: 900 });
   </script>
 </body>
 </html>
