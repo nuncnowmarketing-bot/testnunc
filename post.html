@@ -109,7 +109,9 @@
 
     .fineprint{margin:10px 0 0;color:var(--muted);font-size:12px;line-height:1.35}
   </style>
-  <script src="./assets/app.js?v=4"></script>
+
+  <!-- CACHE BUST: bump this every deploy until stable -->
+  <script src="./assets/app.js?v=6"></script>
 </head>
 <body>
   <div class="wrap">
@@ -272,7 +274,6 @@
     const cancelPay   = document.getElementById('cancelPay');
     const confirmPay  = document.getElementById('confirmPay');
 
-    // Demo FX rates: 1 unit -> USD
     const FX_TO_USD = Object.freeze({
       USD: 1, EUR: 1.09, GBP: 1.27, CAD: 0.74, AUD: 0.67, NZD: 0.62,
       JPY: 0.0068, CNY: 0.14, KRW: 0.00076, INR: 0.012, CHF: 1.12,
@@ -284,7 +285,7 @@
       MYR: 0.21, IDR: 0.000064, PHP: 0.018
     });
 
-    // page country (demo)
+    // demo country
     const pageCountry = window.NUNC.rand(window.NUNC.COUNTRIES);
     elCountry.textContent = 'Location: ' + pageCountry;
 
@@ -368,7 +369,7 @@
     };
 
     const submit = ()=>{
-      // HARD GATE: if user tries to post while logged out, redirect to login.
+      // HARD GATE: IMMEDIATE redirect. No modal.
       if (!isLoggedIn()) {
         gotoLogin();
         return;
@@ -388,7 +389,6 @@
 
     // ---------- Render API post creation ----------
     const finalizePost = async ()=>{
-      // If token disappears mid-flow, force login.
       if (!isLoggedIn()) {
         closePay();
         gotoLogin();
@@ -412,7 +412,6 @@
       confirmPay.textContent = 'Posting…';
 
       try{
-        // AUTHORITATIVE: must be authenticated inside assets/app.js.
         await window.NUNC.addOrUpdatePost({
           text: String(pendingPostText).slice(0, 200),
           country: pageCountry,
@@ -423,7 +422,6 @@
         toastMsg('Posted with ' + boosts + ' boosts.');
         setTimeout(() => location.href = './index.html', 450);
       }catch(err){
-        // If token expired or server rejects, force login
         if (err?.status === 401 || err?.message === 'LOGIN_REQUIRED') {
           closePay();
           gotoLogin();
@@ -433,7 +431,12 @@
         confirmPay.disabled = false;
         confirmPay.textContent = 'Pay & Post';
         posting = false;
-        toastMsg('Post failed (API unreachable).');
+
+        const msg =
+          (err?.data && (err.data.error || err.data.message)) ||
+          err?.message ||
+          'Post failed';
+        toastMsg(msg);
       }
     };
 
