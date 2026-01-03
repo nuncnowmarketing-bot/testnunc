@@ -18,7 +18,8 @@
   const ONE_DAY_MS = 86400000;
 
   // ---- API base (hardcoded for now) ----
-  const API_BASE = 'https://testnunc.onrender.com';
+  // Fix 1: Keep /api/* and change the frontend base URL
+  const API_BASE = "https://testnunc.onrender.com/api";
 
   // ---- Cache keys (NOT authority) ----
   const CACHE_POSTS_KEY = 'nunc_cache_posts_v1';
@@ -280,11 +281,10 @@
       return { posts: cached, boosts };
     }
 
-    const data = await apiJson('/api/posts', { method: 'GET' });
+    const data = await apiJson('/posts', { method: 'GET' });
     const posts = sortLeaderboardPosts(prunePosts(dedupeById(Array.isArray(data.posts) ? data.posts : [])));
- saveCachedPosts(posts);
-// Do NOT broadcast on every read; it creates refresh loops in pages that watch ledger updates.
-
+    saveCachedPosts(posts);
+    // Do NOT broadcast on every read; it creates refresh loops in pages that watch ledger updates.
 
     const boosts = Object.create(null);
     for (const p of posts) boosts[p.id] = Number(p.boosts || 0);
@@ -306,7 +306,7 @@
 
     const payload = { text, country, boosts };
 
-    const data = await apiJson('/api/posts', {
+    const data = await apiJson('/posts', {
       method: 'POST',
       body: JSON.stringify(payload),
     });
@@ -329,7 +329,7 @@
     const inc = Math.max(0, Math.floor(Number(add || 0)));
     if (!id || inc < 1) return { ok: false, boosts: 0 };
 
-    const data = await apiJson(`/api/posts/${encodeURIComponent(id)}/boost`, {
+    const data = await apiJson(`/posts/${encodeURIComponent(id)}/boost`, {
       method: 'POST',
       body: JSON.stringify({ add: inc }),
     });
@@ -351,7 +351,7 @@
     const id = String(postId || '').trim();
     if (!id) return { ok: false };
 
-    await apiJson(`/api/posts/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    await apiJson(`/posts/${encodeURIComponent(id)}`, { method: 'DELETE' });
 
     const cached = loadCachedPosts().filter(p => p && p.id !== id);
     saveCachedPosts(sortLeaderboardPosts(cached));
