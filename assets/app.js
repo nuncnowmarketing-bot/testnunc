@@ -11,15 +11,22 @@
    - POST   /api/posts
    - POST   /api/posts/:id/boost   (supports optional JSON body { add })
    - DELETE /api/posts/:id
+
+   Auth endpoints assumed:
+   - POST   /api/auth/login
+   - POST   /api/auth/register
+   - GET    /api/auth/me
 */
 (() => {
   'use strict';
 
   const ONE_DAY_MS = 86400000;
 
-  // ---- API base (hardcoded for now) ----
-  // Fix 1: Keep /api/* and change the frontend base URL
+  // ---- API base ----
   const API_BASE = "https://testnunc.onrender.com/api";
+
+  // ---- Auth token storage ----
+  const TOKEN_KEY = 'nunc_token_v1';
 
   // ---- Cache keys (NOT authority) ----
   const CACHE_POSTS_KEY = 'nunc_cache_posts_v1';
@@ -44,7 +51,7 @@
   const safeSet = (k, v) => { try { localStorage.setItem(k, v); return true; } catch { return false; } };
   const safeRemove = (k) => { try { localStorage.removeItem(k); return true; } catch { return false; } };
 
-  // ---- Countries (UN members + Kosovo + Palestine; no other dependencies/non-recognised states) ----
+  // ---- Countries (UN members + Kosovo + Palestine) ----
   const COUNTRIES = [
     'Afghanistan','Albania','Algeria','Andorra','Angola','Antigua and Barbuda','Argentina','Armenia','Australia','Austria','Azerbaijan',
     'Bahamas','Bahrain','Bangladesh','Barbados','Belarus','Belgium','Belize','Benin','Bhutan','Bolivia','Bosnia and Herzegovina','Botswana','Brazil','Brunei','Bulgaria','Burkina Faso','Burundi',
@@ -75,6 +82,11 @@
 
   // ---- URL rule (block obvious links) ----
   const hasUrl = (s) => /(https?:\/\/|www\.|\.[a-z]{2,})(\/|$)/i.test(String(s || ''));
+
+  // ---- Auth helpers ----
+  const getToken = () => safeGet(TOKEN_KEY, '') || '';
+  const setToken = (t) => { if (!t) safeRemove(TOKEN_KEY); else safeSet(TOKEN_KEY, String(t)); };
+  const isAuthed = () => !!getToken();
 
   // ---- Canonical post schema ----
   // { id, text, country, createdAt, expiresAt, boosts }
@@ -207,6 +219,7 @@
     window.addEventListener('storage', (e) => {
       if (!e) return;
       if (e.key === CACHE_POSTS_KEY) fn({ type: 'storage', key: e.key });
+      if (e.key === TOKEN_KEY) fn({ type: 'auth', key: e.key });
     });
 
     window.addEventListener('nunc:ledger_update', (e) => fn({ type: 'local', detail: e?.detail }));
@@ -254,18 +267,63 @@
   // ---- API helpers ----
   const apiJson = async (path, opts) => {
     const options = opts || {};
+    const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+
+    const token = getToken();
+    if (token) headers.Authorization = 'Bearer ' + token;
+
     const res = await fetch(API_BASE + path, {
       method: options.method || 'GET',
-      headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+      headers,
       body: options.body,
     });
+
     const data = await res.json().catch(() => ({}));
+
     if (!res.ok) {
-      const err = new Error('HTTP ' + res.status);
+      const err = new Error((data && data.error) ? String(data.error) : ('HTTP ' + res.status));
       err.status = res.status;
       err.data = data;
+
+      // If server says unauthorized, clear token to avoid sticky broken state.
+      if (res.status === 401) setToken('');
+
       throw err;
     }
+
+    return data;
+  };
+
+  // ---- Auth operations (used by login.html) ----
+  const authRegister = async (email, password) => {
+    const data = await apiJson('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ email, password })
+    });
+    if (data && data.token) setToken(data.token);
+    signalLedgerUpdate({ op: 'auth_login' });
+    return data;
+  };
+
+  const authLogin = async (email, password) => {
+    const data = await apiJson('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password })
+    });
+    if (data && data.token) setToken(data.token);
+    signalLedgerUpdate({ op: 'auth_login' });
+    return data;
+  };
+
+  const authLogout = () => {
+    setToken('');
+    signalLedgerUpdate({ op: 'auth_logout' });
+    return true;
+  };
+
+  const authMe = async () => {
+    if (!isAuthed()) return null;
+    const data = await apiJson('/auth/me', { method: 'GET' });
     return data;
   };
 
@@ -282,9 +340,14 @@
     }
 
     const data = await apiJson('/posts', { method: 'GET' });
-    const posts = sortLeaderboardPosts(prunePosts(dedupeById(Array.isArray(data.posts) ? data.posts : [])));
+
+    const posts = sortLeaderboardPosts(
+      prunePosts(
+        dedupeById(Array.isArray(data.posts) ? data.posts : [])
+      )
+    );
+
     saveCachedPosts(posts);
-    // Do NOT broadcast on every read; it creates refresh loops in pages that watch ledger updates.
 
     const boosts = Object.create(null);
     for (const p of posts) boosts[p.id] = Number(p.boosts || 0);
@@ -292,39 +355,50 @@
     return { posts, boosts };
   };
 
-  // ---------------------------------------------------------------------------
-  // FIXED: Create post must NOT require an id (server generates id).
-  // ---------------------------------------------------------------------------
+  // Create post (server generates id). AUTH REQUIRED.
   const addOrUpdatePost = async (post) => {
+    if (!isAuthed()) {
+      const e = new Error('LOGIN_REQUIRED');
+      e.status = 401;
+      throw e;
+    }
+
     const text = String(post?.text ?? '').trim().slice(0, 200);
     const country = String(post?.country ?? '—').trim().slice(0, 80) || '—';
+
+    // Optional: initial boosts on create (your current UI expects it)
     const boosts = Math.max(0, Math.floor(Number(post?.boosts ?? 0)));
 
-    // client-side rules (mirror server)
     if (!text) return null;
     if (hasUrl(text)) return null;
 
     const payload = { text, country, boosts };
 
+    // Expect either { post: {...} } or raw post object; normalize both.
     const data = await apiJson('/posts', {
       method: 'POST',
       body: JSON.stringify(payload),
     });
 
-    const created = canonicalizePost(data.post);
+    const created = canonicalizePost(data?.post ? data.post : data);
     if (!created) return null;
 
-    // Update cache immediately
     const cached = loadCachedPosts();
     const merged = sortLeaderboardPosts([created, ...cached.filter(p => p && p.id !== created.id)]);
     saveCachedPosts(merged);
-    signalLedgerUpdate({ op: 'post_create', id: created.id });
 
+    signalLedgerUpdate({ op: 'post_create', id: created.id });
     return created;
   };
 
-  // addBoosts(postId, add): call API once with { add } (your server supports it)
+  // addBoosts(postId, add): AUTH REQUIRED.
   const addBoosts = async (postId, add) => {
+    if (!isAuthed()) {
+      const e = new Error('LOGIN_REQUIRED');
+      e.status = 401;
+      throw e;
+    }
+
     const id = String(postId || '').trim();
     const inc = Math.max(0, Math.floor(Number(add || 0)));
     if (!id || inc < 1) return { ok: false, boosts: 0 };
@@ -334,20 +408,30 @@
       body: JSON.stringify({ add: inc }),
     });
 
-    const lastPost = canonicalizePost(data.post);
-    if (!lastPost) return { ok: false, boosts: 0 };
+    const updated = canonicalizePost(data?.post ? data.post : data);
+    // If endpoint returns {id, boosts} only, fall back to updating cached value.
+    const nextBoosts = Number(data?.boosts ?? updated?.boosts ?? NaN);
+
+    if (!Number.isFinite(nextBoosts)) return { ok: true, boosts: 0 };
 
     const cached = loadCachedPosts();
-    const next = cached.map(p => (p && p.id === id) ? { ...p, boosts: lastPost.boosts } : p);
+    const next = cached.map(p => (p && p.id === id) ? { ...p, boosts: Math.floor(nextBoosts) } : p);
     const exists = next.some(p => p && p.id === id);
-    const merged = sortLeaderboardPosts(exists ? next : [lastPost, ...next]);
+    const merged = sortLeaderboardPosts(exists ? next : (updated ? [updated, ...next] : next));
     saveCachedPosts(merged);
 
-    signalLedgerUpdate({ op: 'boost_add', id, add: inc, next: lastPost.boosts });
-    return { ok: true, boosts: lastPost.boosts };
+    signalLedgerUpdate({ op: 'boost_add', id, add: inc, next: Math.floor(nextBoosts) });
+    return { ok: true, boosts: Math.floor(nextBoosts) };
   };
 
+  // deletePost(postId): AUTH REQUIRED (server should enforce ownership).
   const deletePost = async (postId) => {
+    if (!isAuthed()) {
+      const e = new Error('LOGIN_REQUIRED');
+      e.status = 401;
+      throw e;
+    }
+
     const id = String(postId || '').trim();
     if (!id) return { ok: false };
 
@@ -355,6 +439,7 @@
 
     const cached = loadCachedPosts().filter(p => p && p.id !== id);
     saveCachedPosts(sortLeaderboardPosts(cached));
+
     signalLedgerUpdate({ op: 'post_delete', id });
     return { ok: true };
   };
@@ -390,30 +475,48 @@
   window.NUNC = Object.freeze({
     API_BASE,
     ONE_DAY_MS,
+
+    // cache + legacy
     CACHE_POSTS_KEY,
     LEGACY_POST_KEYS,
     COUNTRIES,
 
+    // utils
     now,
     rand,
     hasUrl,
-
     fmtTimeAgo,
     fmtExpiry,
 
+    // auth
+    TOKEN_KEY,
+    isAuthed,
+    getToken,
+    setToken,
+    authRegister,
+    authLogin,
+    authLogout,
+    authMe,
+
+    // cache IO
     loadCachedPosts,
     saveCachedPosts,
 
+    // transforms
     prunePosts,
     sortLeaderboardPosts,
 
+    // sync
     signalLedgerUpdate,
     watchLedger,
 
+    // API ops
     getLedger,
     addOrUpdatePost,
     addBoosts,
     deletePost,
+
+    // aggregation
     totalsByCountry,
     sortCountriesByTotals
   });
