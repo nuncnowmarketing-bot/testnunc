@@ -9,7 +9,7 @@
    Minimum endpoints assumed:
    - GET    /api/posts
    - POST   /api/posts
-   - POST   /api/posts/:id/boost
+   - POST   /api/posts/:id/boost   (supports optional JSON body { add })
    - DELETE /api/posts/:id
 */
 (() => {
@@ -156,7 +156,6 @@
   };
 
   const migrateLegacyToCacheOnce = () => {
-    // Merge legacy posts into cache (best-effort), then delete legacy keys.
     let merged = loadCachedPosts();
 
     for (const k of LEGACY_POST_KEYS) {
@@ -166,8 +165,6 @@
       if (Array.isArray(arr) && arr.length) merged = merged.concat(arr);
     }
 
-    // Merge legacy boosts into posts boosts (only if posts exist and boosts missing/0).
-    // This does NOT persist as separate boosts map anymore; API is authority.
     for (const bk of LEGACY_BOOSTS_KEYS) {
       const raw = safeGet(bk, null);
       if (raw == null) continue;
@@ -185,7 +182,6 @@
     merged = sortLeaderboardPosts(prunePosts(dedupeById(merged)));
     if (merged.length) saveCachedPosts(merged);
 
-    // Delete legacy keys to stop divergence
     for (const k of LEGACY_POST_KEYS) safeRemove(k);
     for (const k of LEGACY_BOOSTS_KEYS) safeRemove(k);
   };
@@ -207,7 +203,6 @@
       });
     }
 
-    // cache changes (same device, other tabs)
     window.addEventListener('storage', (e) => {
       if (!e) return;
       if (e.key === CACHE_POSTS_KEY) fn({ type: 'storage', key: e.key });
@@ -215,7 +210,6 @@
 
     window.addEventListener('nunc:ledger_update', (e) => fn({ type: 'local', detail: e?.detail }));
 
-    // Poll (helps embedded previews / environments that swallow events)
     let lastSig = '';
     const poll = () => {
       const sig = safeGet(CACHE_POSTS_KEY, '');
@@ -275,12 +269,10 @@
   };
 
   // ---- Backend-first operations used by pages ----
-  // getLedger(): returns { posts, boosts } where boosts is derived from posts (API already includes boosts).
   const getLedger = async (opts) => {
     const options = opts || {};
     const preferCache = !!options.preferCache;
 
-    // Fast path: return cache immediately if requested (page can then refresh)
     if (preferCache) {
       const cached = sortLeaderboardPosts(loadCachedPosts());
       const boosts = Object.create(null);
@@ -288,7 +280,6 @@
       return { posts: cached, boosts };
     }
 
-    // Authoritative: fetch from API
     const data = await apiJson('/api/posts', { method: 'GET' });
     const posts = sortLeaderboardPosts(prunePosts(dedupeById(Array.isArray(data.posts) ? data.posts : [])));
     saveCachedPosts(posts);
@@ -300,20 +291,19 @@
     return { posts, boosts };
   };
 
-  // create post (seeds initial paid boosts server-side)
+  // ---------------------------------------------------------------------------
+  // FIXED: Create post must NOT require an id (server generates id).
+  // ---------------------------------------------------------------------------
   const addOrUpdatePost = async (post) => {
-    // This function is now "createPost" semantics. Updates are not supported by your minimum API.
-    const cp = canonicalizePost(post);
-    if (!cp) return null;
+    const text = String(post?.text ?? '').trim().slice(0, 200);
+    const country = String(post?.country ?? '—').trim().slice(0, 80) || '—';
+    const boosts = Math.max(0, Math.floor(Number(post?.boosts ?? 0)));
 
-    // client-side rules
-    if (hasUrl(cp.text)) return null;
+    // client-side rules (mirror server)
+    if (!text) return null;
+    if (hasUrl(text)) return null;
 
-    const payload = {
-      text: cp.text,
-      country: cp.country,
-      boosts: Math.max(0, Math.floor(Number(cp.boosts || 0)))
-    };
+    const payload = { text, country, boosts };
 
     const data = await apiJson('/api/posts', {
       method: 'POST',
@@ -332,25 +322,22 @@
     return created;
   };
 
-  // addBoosts(postId, add=1): authoritative API call, then update cache from returned post
+  // addBoosts(postId, add): call API once with { add } (your server supports it)
   const addBoosts = async (postId, add) => {
     const id = String(postId || '').trim();
     const inc = Math.max(0, Math.floor(Number(add || 0)));
     if (!id || inc < 1) return { ok: false, boosts: 0 };
 
-    // API only increments by 1 per call; loop for inc (kept simple + correct).
-    // If you want batching later, add an endpoint that accepts { add }.
-    let lastPost = null;
-    for (let i = 0; i < inc; i++) {
-      const data = await apiJson(`/api/posts/${encodeURIComponent(id)}/boost`, { method: 'POST' });
-      lastPost = canonicalizePost(data.post);
-    }
+    const data = await apiJson(`/api/posts/${encodeURIComponent(id)}/boost`, {
+      method: 'POST',
+      body: JSON.stringify({ add: inc }),
+    });
+
+    const lastPost = canonicalizePost(data.post);
     if (!lastPost) return { ok: false, boosts: 0 };
 
-    // Update cache
     const cached = loadCachedPosts();
     const next = cached.map(p => (p && p.id === id) ? { ...p, boosts: lastPost.boosts } : p);
-    // If post not in cache yet (rare), prepend it.
     const exists = next.some(p => p && p.id === id);
     const merged = sortLeaderboardPosts(exists ? next : [lastPost, ...next]);
     saveCachedPosts(merged);
@@ -397,48 +384,35 @@
     return l;
   };
 
-  // ---- Init ----
-  // One-time migration of legacy localStorage ledgers into cache (not authority),
-  // so older clients don't appear empty before first API fetch.
   migrateLegacyToCacheOnce();
 
-  // ---- Export surface ----
   window.NUNC = Object.freeze({
-    // API
     API_BASE,
-
-    // constants
     ONE_DAY_MS,
     CACHE_POSTS_KEY,
     LEGACY_POST_KEYS,
     COUNTRIES,
 
-    // utils
     now,
     rand,
     hasUrl,
 
-    // formatting
     fmtTimeAgo,
     fmtExpiry,
 
-    // cache IO (not authority)
     loadCachedPosts,
     saveCachedPosts,
 
-    // sorting/pruning
     prunePosts,
     sortLeaderboardPosts,
 
-    // sync
     signalLedgerUpdate,
     watchLedger,
 
-    // operations (backend-first)
-    getLedger,         // async
-    addOrUpdatePost,   // async create
-    addBoosts,         // async
-    deletePost,        // async
+    getLedger,
+    addOrUpdatePost,
+    addBoosts,
+    deletePost,
     totalsByCountry,
     sortCountriesByTotals
   });
