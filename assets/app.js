@@ -12,10 +12,9 @@
    - POST   /api/posts/:id/boost   (supports optional JSON body { add })
    - DELETE /api/posts/:id
 
-   Auth endpoints assumed:
-   - POST   /api/auth/login
-   - POST   /api/auth/register
-   - GET    /api/auth/me
+   TEMP DEV AUTH (deployed simulation):
+   - POST   /api/dev/login   body: { email, password, code } -> { token }
+   - (later replace with /api/auth/login, /api/auth/register, /api/auth/me)
 */
 (() => {
   'use strict';
@@ -294,24 +293,39 @@
     return data;
   };
 
-  // ---- Auth operations (used by login.html) ----
+  // ---- Auth operations (TEMP DEV + future real auth) ----
+  // TEMP DEV: /dev/login expects { email, password, code } -> { token }
+  const authDevLogin = async (email, password, code) => {
+    const data = await apiJson('/dev/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password, code })
+    });
+    if (data && data.token) setToken(data.token);
+    signalLedgerUpdate({ op: 'auth_login', mode: 'dev' });
+    return data;
+  };
+
+  // FUTURE: /auth/login (keep signature; if code provided, use dev login)
+  const authLogin = async (email, password, code) => {
+    if (code != null && String(code).length) {
+      return authDevLogin(email, password, code);
+    }
+    const data = await apiJson('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password })
+    });
+    if (data && data.token) setToken(data.token);
+    signalLedgerUpdate({ op: 'auth_login', mode: 'real' });
+    return data;
+  };
+
   const authRegister = async (email, password) => {
     const data = await apiJson('/auth/register', {
       method: 'POST',
       body: JSON.stringify({ email, password })
     });
     if (data && data.token) setToken(data.token);
-    signalLedgerUpdate({ op: 'auth_login' });
-    return data;
-  };
-
-  const authLogin = async (email, password) => {
-    const data = await apiJson('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password })
-    });
-    if (data && data.token) setToken(data.token);
-    signalLedgerUpdate({ op: 'auth_login' });
+    signalLedgerUpdate({ op: 'auth_login', mode: 'real' });
     return data;
   };
 
@@ -365,8 +379,6 @@
 
     const text = String(post?.text ?? '').trim().slice(0, 200);
     const country = String(post?.country ?? '—').trim().slice(0, 80) || '—';
-
-    // Optional: initial boosts on create (your current UI expects it)
     const boosts = Math.max(0, Math.floor(Number(post?.boosts ?? 0)));
 
     if (!text) return null;
@@ -374,7 +386,6 @@
 
     const payload = { text, country, boosts };
 
-    // Expect either { post: {...} } or raw post object; normalize both.
     const data = await apiJson('/posts', {
       method: 'POST',
       body: JSON.stringify(payload),
@@ -409,7 +420,6 @@
     });
 
     const updated = canonicalizePost(data?.post ? data.post : data);
-    // If endpoint returns {id, boosts} only, fall back to updating cached value.
     const nextBoosts = Number(data?.boosts ?? updated?.boosts ?? NaN);
 
     if (!Number.isFinite(nextBoosts)) return { ok: true, boosts: 0 };
@@ -424,7 +434,7 @@
     return { ok: true, boosts: Math.floor(nextBoosts) };
   };
 
-  // deletePost(postId): AUTH REQUIRED (server should enforce ownership).
+  // deletePost(postId): AUTH REQUIRED.
   const deletePost = async (postId) => {
     if (!isAuthed()) {
       const e = new Error('LOGIN_REQUIRED');
@@ -493,6 +503,7 @@
     isAuthed,
     getToken,
     setToken,
+    authDevLogin,
     authRegister,
     authLogin,
     authLogout,
