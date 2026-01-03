@@ -363,6 +363,20 @@
       return;
     }
 
+    // ---------- Auth gate (redirect to login) ----------
+    const TOKEN_KEY = 'nunc_token_v1'; // must match assets/app.js
+    const LOGIN_PAGE = './login.html';
+
+    function isLoggedIn(){
+      return !!localStorage.getItem(TOKEN_KEY);
+    }
+
+    function gotoLogin(){
+      const file = location.pathname.split('/').pop() || 'index.html';
+      const returnTo = file + location.search + location.hash;
+      location.href = `${LOGIN_PAGE}?next=${encodeURIComponent(returnTo)}`;
+    }
+
     const FEED = document.getElementById('feed');
     const SENTINEL = document.getElementById('sentinel');
     const STATUS = document.getElementById('status');
@@ -458,6 +472,13 @@
     document.addEventListener('keydown', (e)=>{ if(payBackdrop.style.display === 'flex' && e.key === 'Escape') closePay(); });
 
     async function finalizeBoost(){
+      // If user is not logged in, do not allow a “fake” pay flow.
+      if (!isLoggedIn()) {
+        closePay();
+        gotoLogin();
+        return;
+      }
+
       const amt = parseAmount(payAmount.value);
       const cur = payCurrency.value;
       if(!Number.isFinite(amt) || amt <= 0) return toastMsg('Payment blocked: invalid amount.');
@@ -469,7 +490,13 @@
 
       try{
         await window.NUNC.addBoosts(pendingBoostPostId, add);
-      }catch(_){
+      }catch(err){
+        // If token missing/expired, force login
+        if (err?.status === 401 || err?.message === 'LOGIN_REQUIRED') {
+          closePay();
+          gotoLogin();
+          return;
+        }
         return toastMsg('Boost failed.');
       }
 
@@ -533,6 +560,11 @@
       boostBtn.setAttribute('aria-label', 'boost');
       boostBtn.textContent = '▲';
       boostBtn.addEventListener('click', ()=>{
+        // HARD GATE: attempting to boost while logged out redirects to login.
+        if (!isLoggedIn()) {
+          gotoLogin();
+          return;
+        }
         pendingBoostPostId = id;
         openPay();
       });
@@ -581,7 +613,6 @@
       FEED.appendChild(row);
     }
 
-    // Synchronous append to avoid race conditions with refreshes
     function appendBatch(){
       if(cursor >= allPosts.length) return;
 
@@ -629,7 +660,6 @@
       }
     }
 
-    // Initial load: cache fast, then authoritative
     (async () => {
       await renderFresh(false);
       await renderFresh(true);
@@ -643,14 +673,12 @@
 
     io.observe(SENTINEL);
 
-    // Debounced refresh
     let refreshTimer = null;
     const scheduleRefresh = () => {
       clearTimeout(refreshTimer);
       refreshTimer = setTimeout(() => renderFresh(true), 220);
     };
 
-    // IMPORTANT: only refresh on real mutations; ignore poll/storage/cache refresh churn
     window.NUNC.watchLedger((ev) => {
       const d = ev?.detail || ev || {};
       const op = d?.op;
