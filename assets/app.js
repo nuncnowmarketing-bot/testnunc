@@ -282,8 +282,9 @@
 
     const data = await apiJson('/api/posts', { method: 'GET' });
     const posts = sortLeaderboardPosts(prunePosts(dedupeById(Array.isArray(data.posts) ? data.posts : [])));
-    saveCachedPosts(posts);
-    signalLedgerUpdate({ op: 'ledger_refresh', n: posts.length });
+ saveCachedPosts(posts);
+// Do NOT broadcast on every read; it creates refresh loops in pages that watch ledger updates.
+
 
     const boosts = Object.create(null);
     for (const p of posts) boosts[p.id] = Number(p.boosts || 0);
