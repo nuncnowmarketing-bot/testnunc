@@ -49,9 +49,6 @@
     .meta{display:flex;gap:10px;align-items:center;color:var(--muted);font-size:14px;flex-wrap:wrap}
     .chip{border:1px solid var(--hair);background:rgba(255,255,255,0.04);padding:6px 10px;border-radius:999px}
 
-    .btn.danger{border-color:rgba(255,77,77,0.45);color:#ffb3b3;background:rgba(255,77,77,0.08)}
-    .btn.danger:hover{background:rgba(255,77,77,0.12)}
-
     .help{margin-top:10px;padding-top:10px;border-top:1px solid var(--hair);color:var(--muted);font-size:14px;}
     .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:rgba(0,0,0,0.82);border:1px solid var(--hair);padding:10px 12px;border-radius:12px;display:none;z-index:50}
 
@@ -112,7 +109,7 @@
 
     .fineprint{margin:10px 0 0;color:var(--muted);font-size:12px;line-height:1.35}
   </style>
-  <script src="./assets/app.js?v=3"></script>
+  <script src="./assets/app.js?v=4"></script>
 </head>
 <body>
   <div class="wrap">
@@ -164,7 +161,7 @@
   <!-- Payment modal -->
   <div class="modal-backdrop" id="payBackdrop" aria-hidden="true">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="payTitle">
-      <h2 id="payTitle">Pay to boost</h2>
+      <h2 id="payTitle">Pay to post</h2>
       <p class="muted">1 USD = 1 boost. Foreign currencies convert to USD at fixed demo FX rates.</p>
 
       <div class="grid">
@@ -242,6 +239,20 @@
       return;
     }
 
+    // ---------- Auth gate (redirect to login) ----------
+    const TOKEN_KEY = 'nunc_token_v1'; // must match assets/app.js
+    const LOGIN_PAGE = './login.html';
+
+    function isLoggedIn(){
+      return !!localStorage.getItem(TOKEN_KEY);
+    }
+
+    function gotoLogin(){
+      const file = location.pathname.split('/').pop() || 'post.html';
+      const returnTo = file + location.search + location.hash;
+      location.href = `${LOGIN_PAGE}?next=${encodeURIComponent(returnTo)}`;
+    }
+
     const MAX = 200;
 
     const elText    = document.getElementById('postText');
@@ -263,47 +274,17 @@
 
     // Demo FX rates: 1 unit -> USD
     const FX_TO_USD = Object.freeze({
-      USD: 1,
-      EUR: 1.09,
-      GBP: 1.27,
-      CAD: 0.74,
-      AUD: 0.67,
-      NZD: 0.62,
-      JPY: 0.0068,
-      CNY: 0.14,
-      KRW: 0.00076,
-      INR: 0.012,
-      CHF: 1.12,
-      SEK: 0.096,
-      NOK: 0.094,
-      DKK: 0.15,
-      PLN: 0.25,
-      CZK: 0.043,
-      HUF: 0.0029,
-      RON: 0.22,
-      BGN: 0.56,
-      TRY: 0.03,
-      ILS: 0.27,
-      AED: 0.27,
-      SAR: 0.27,
-      BRL: 0.20,
-      MXN: 0.058,
-      CLP: 0.0011,
-      COP: 0.00025,
-      PEN: 0.27,
-      ZAR: 0.055,
-      NGN: 0.00066,
-      EGP: 0.021,
-      KES: 0.0067,
-      SGD: 0.74,
-      HKD: 0.13,
-      TWD: 0.031,
-      THB: 0.028,
-      MYR: 0.21,
-      IDR: 0.000064,
-      PHP: 0.018
+      USD: 1, EUR: 1.09, GBP: 1.27, CAD: 0.74, AUD: 0.67, NZD: 0.62,
+      JPY: 0.0068, CNY: 0.14, KRW: 0.00076, INR: 0.012, CHF: 1.12,
+      SEK: 0.096, NOK: 0.094, DKK: 0.15, PLN: 0.25, CZK: 0.043,
+      HUF: 0.0029, RON: 0.22, BGN: 0.56, TRY: 0.03, ILS: 0.27,
+      AED: 0.27, SAR: 0.27, BRL: 0.20, MXN: 0.058, CLP: 0.0011,
+      COP: 0.00025, PEN: 0.27, ZAR: 0.055, NGN: 0.00066, EGP: 0.021,
+      KES: 0.0067, SGD: 0.74, HKD: 0.13, TWD: 0.031, THB: 0.028,
+      MYR: 0.21, IDR: 0.000064, PHP: 0.018
     });
 
+    // page country (demo)
     const pageCountry = window.NUNC.rand(window.NUNC.COUNTRIES);
     elCountry.textContent = 'Location: ' + pageCountry;
 
@@ -387,9 +368,16 @@
     };
 
     const submit = ()=>{
+      // HARD GATE: if user tries to post while logged out, redirect to login.
+      if (!isLoggedIn()) {
+        gotoLogin();
+        return;
+      }
+
       const t = (elText.value || '').trim();
       if(!t) return toastMsg('Empty post blocked.');
       if(window.NUNC.hasUrl(t)) return toastMsg('Links are blocked.');
+
       pendingPostText = t;
       openPay();
     };
@@ -400,6 +388,13 @@
 
     // ---------- Render API post creation ----------
     const finalizePost = async ()=>{
+      // If token disappears mid-flow, force login.
+      if (!isLoggedIn()) {
+        closePay();
+        gotoLogin();
+        return;
+      }
+
       if (posting) return;
       posting = true;
 
@@ -417,7 +412,7 @@
       confirmPay.textContent = 'Posting…';
 
       try{
-        // AUTHORITATIVE: POST to Render API via NUNC runtime
+        // AUTHORITATIVE: must be authenticated inside assets/app.js.
         await window.NUNC.addOrUpdatePost({
           text: String(pendingPostText).slice(0, 200),
           country: pageCountry,
@@ -427,7 +422,14 @@
         closePay();
         toastMsg('Posted with ' + boosts + ' boosts.');
         setTimeout(() => location.href = './index.html', 450);
-      }catch(_){
+      }catch(err){
+        // If token expired or server rejects, force login
+        if (err?.status === 401 || err?.message === 'LOGIN_REQUIRED') {
+          closePay();
+          gotoLogin();
+          return;
+        }
+
         confirmPay.disabled = false;
         confirmPay.textContent = 'Pay & Post';
         posting = false;
